@@ -92,3 +92,11 @@ no real payment, email or Google login was performed by the mocked tests.
 Original implementation notes are preserved in
 [sites-original-readme.md](docs/sites-original-readme.md). Read the newer deployment
 instructions first where old notes describe platform-managed admin authentication.
+
+## Commercial portal update
+
+The partner dashboard, direct referrals, authorised progress timelines, earnings,
+customer enquiry/quotation view and FAQs are implemented. See
+[COMMERCIAL_PORTAL.md](docs/COMMERCIAL_PORTAL.md) for access boundaries, event-driven
+updates, commission rules and configuration still required for live checkout.
+The additional live read-only Neon check is **not** part of routine npm test.

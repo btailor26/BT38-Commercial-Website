@@ -33,8 +33,8 @@ assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,paymen
 assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,payment_reference:'refund-2',original_reference:'receipt-1',type:'refund',net_pence:-49900},'owner')).status,400);
 await call('/api/admin/referral-settings','POST',{...config,commission_bps:2000},'owner');
 assert.equal((await read('/api/referral/account','alice')).partner.terms.commission_bps,1000);
-assert.equal((await call('/api/admin/referral-paid','POST',{id:payment.id,payout_reference:'bank-transfer-1'},'owner')).status,200);
-assert.equal((await read('/api/referral/account','alice')).entries.find(x=>x.id===payment.id).status,'paid');
+assert.equal((await call('/api/admin/referral-paid','POST',{id:payment.id,payout_reference:'bank-transfer-1'},'owner')).status,409);
+assert.equal((await read('/api/referral/account','alice')).entries.find(x=>x.id===payment.id).status,'recorded');
 for(const p of ['/','/integrations']){const h=await (await call(p)).text();assert.ok(h.includes('£4,999'));}
 for(const p of ['/partner','/referral-terms'])assert.equal((await call(p)).status,200);
 new Function(await (await call('/referral.js')).text());
