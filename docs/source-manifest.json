@@ -1,0 +1,28 @@
+{
+  "source_commit": "1c0468615e7d98e06e644b139a0e49aacf6435de",
+  "sites_version": 11,
+  "files": {
+    ".gitignore": "9dd7ff2529bcc1251813ca4b543be7ca0019b0ff0e1bacf109e412a922eb4996",
+    ".openai/hosting.json": "98d1ac83aeffeb61ab31b2f6c07555b63118bfb5c32112d5353f0a92fbe1526c",
+    "README.md": "6c667d4e9f93c7b45abdfb582cb58a371269eb4b9188cde58b364e6387107296",
+    "migrations/001_bt38inv_website.sql": "0b01ddb400ff34612d7ad242a3dfdc40224b1dd36a39f8522a57e5379fbcce1c",
+    "migrations/002_no_bank_details.sql": "a27ae653d7ea6513d8490f50ad0ee09fa57fbde727f00b699cecdc7fcf52d6bf",
+    "package-lock.json": "63c6099930a1a38190786f4f387b69d7ab721ea75b9bc6531b51c43d82ba4858",
+    "package.json": "8581084f7f0def17d221006d11381bc6c361e017dc1bc0d6a36a15201ee6d796",
+    "scripts/build.sh": "6316a850ead12f34916907132b5f09ec77677f1590f5bdf767832587f1cbddb5",
+    "scripts/bundle.mjs": "d6621b7248380414094511994760490b4d1b1ebd0357bf8c37e1628c35c77136",
+    "scripts/check-checkout.mjs": "4b577990bb6ae7704a95753e6032406f170ce842b4855a0f1bf6c9efeb8295b8",
+    "scripts/check-customers.mjs": "c26b3e83913d23aeadf2967d81ea228533a48dce4e691db615ae3378aa9fdf0c",
+    "scripts/check-google-auth.mjs": "2940b238cbcbac5e73e0a7f0770bf1f576aa955dc4d18543e858dd8a4713b5ac",
+    "scripts/check-neon-live.mjs": "e11a59acb5916d85d2093739f7622c6cbcf204243db117428890aa833d6cc3c7",
+    "scripts/check-neon-store.mjs": "ef7128f0139d24a26bda5227cd82550dc4b8f10eadc5684346d4f290617e20c0",
+    "scripts/check-referrals.mjs": "8f8919517bf21e00b56c9818e6d7dae66b95a6292d74f12272eb4e9fc8bdff54",
+    "scripts/check.mjs": "b25cd6af7a3c37906ceec298da49a58cd8406863c16fdd3b0a9ec64988e67b02",
+    "scripts/dev.mjs": "92776a16ad99b95ee26b2ebcfe332c26f7ae6be90ca6b5cc12f06321700b38d8",
+    "scripts/validate-artifact.mjs": "39d9df53ac2461962466d5965c5f4d06f08024ceca40605952d8b753b88d41fd",
+    "worker/customer-accounts.js": "ef9f6807453c322a0c972665386eaead7eff9276913652df7402fe1b86aace46",
+    "worker/google-auth.js": "d773142082f4fd9a0668110b360ed4532c09e8e5e2a197bbf7a23316cf5c897a",
+    "worker/index.js": "5d0b1ada5ed2c6482b13c73f7bc8c8c0f962488c69ba02240be2b15d23e1fceb",
+    "worker/neon-record-store.js": "2fd500de25d54ebf57269c0f3b2e0fc321a3cd3d2010299b3e521f9305d4e961"
+  }
+}

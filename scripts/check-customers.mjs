@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import worker from '../worker/index.js';
+const data=new Map(),origin='https://site.example.invalid';
+const BUCKET={async get(k){const v=data.get(k);return v===undefined?null:{text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,o){if(o?.onlyIf&&data.has(k))return null;data.set(k,v);return {key:k}},async list({prefix}){return {objects:[...data.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
+const env={BUCKET,ADMIN_EMAIL:'owner@example.invalid'};
+async function call(path,method='GET',value,who='alice',extra={}){const headers={origin,'Content-Type':'application/json',...extra};if(who){headers['oai-authenticated-user-id']=who;headers['oai-authenticated-user-email']=who+'@example.invalid';}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
+assert.equal((await call('/api/customer/account','GET',null,null)).status,401);
+assert.equal((await call('/api/customer/support')).status,409);
+for(const p of ['/signup','/login','/account','/account/onboarding','/account/billing','/account/support']){const r=await call(p);assert.equal(r.status,200);const html=await r.text();assert.ok(html.includes('Sign up'));}
+for(const path of ['/account.js','/referral.js','/checkout.js'])new Function(await (await call(path)).text());
+assert.equal((await call('/api/customer/account','POST',{company:'',name:'Alice',country:'GB'})).status,400);
+const profile={company:'Example company',name:'Alice',country:'GB',owner:'fake-owner',iban:'not-stored'};
+assert.equal((await call('/api/customer/account','POST',profile,'alice',{origin:'https://other.example.invalid'})).status,403);
+assert.equal((await call('/api/customer/account','POST',profile)).status,200);
+let d=await (await call('/api/customer/account')).json();assert.equal(d.profile.owner,'alice');assert.equal(d.profile.email,'alice@example.invalid');assert.equal(d.profile.iban,undefined);
+assert.equal((await (await call('/api/customer/account','GET',null,'bob')).json()).profile,null);
+assert.equal((await call('/api/customer/onboarding','POST',{brand_name:'Example Brand',platforms:'Amazon, eBay',requirements:'Connect our existing workflow'})).status,200);
+d=await (await call('/api/customer/account')).json();assert.equal(d.onboarding.brand_name,'Example Brand');assert.equal(d.onboarding.stage,'Requirements received');
+const id=crypto.randomUUID();assert.equal((await call('/api/customer/support','POST',{id,subject:'Order issue',message:'The order view needs checking.'})).status,200);
+assert.equal((await call('/api/customer/support','POST',{id,subject:'duplicate',message:'duplicate'})).status,200);
+assert.equal((await (await call('/api/customer/support')).json()).tickets.length,1);
+assert.equal((await call('/api/customer/support/reply','POST',{id,message:'Other customer cannot reply'},'bob')).status,409);
+await call('/api/customer/account','POST',{company:'Other company',name:'Bob',country:'GB'},'bob');
+assert.equal((await call('/api/customer/support/reply','POST',{id,message:'Other customer cannot reply'},'bob')).status,404);
+assert.equal((await (await call('/api/customer/support','GET',null,'bob')).json()).tickets.length,0);
+assert.equal((await call('/api/customer/admin/overview')).status,403);
+const overview=await (await call('/api/customer/admin/overview','GET',null,'owner')).json();assert.equal(overview.customers.length,2);assert.equal(overview.tickets.length,1);
+const ticket=overview.tickets[0];assert.equal((await call('/api/customer/admin/support','POST',{key:ticket.key,status:'Awaiting customer',message:'Please confirm the affected order.'},'owner')).status,200);
+let support=await (await call('/api/customer/support')).json();assert.equal(support.tickets[0].messages.length,2);assert.equal(support.tickets[0].messages[1].role,'BT38 support');
+assert.equal((await call('/api/customer/support/reply','POST',{id,message:'Here is the order reference.'})).status,200);
+assert.equal((await call('/api/customer/admin/onboarding','POST',{owner:overview.customers.find(c=>c.name==='Alice').owner,stage:'Live',handover_at:'2026-11-18'},'owner')).status,200);
+assert.equal((await (await call('/api/customer/account')).json()).onboarding.stage,'Live');
+assert.equal((await call('/api/partner/profile','POST',{name:'Alice',company:'Referral partner',country:'GB',iban:'not-stored'})).status,200);
+d=await (await call('/api/partner/profile')).json();assert.equal(d.profile.company,'Referral partner');assert.equal(d.profile.iban,undefined);
+assert.equal((await (await call('/api/partner/profile','GET',null,'bob')).json()).profile,null);
+assert.equal((await (await call('/api/customer/billing')).json()).orders.length,0);
+console.log('Passed: customer signup/profile ownership, onboarding persistence, billing isolation, support requests/replies, authorised admin replies, partner profile privacy and client syntax.');

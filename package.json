@@ -1,0 +1,23 @@
+{
+  "name": "bt38-commercial-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-standalone.mjs",
+    "validate": "node --check dist/server/index.js",
+    "dev": "npm run build && node --env-file-if-exists=.env runtime/server.js",
+    "start": "node --env-file-if-exists=.env runtime/server.js",
+    "test": "node scripts/test.mjs",
+    "build:sites": "bash scripts/build.sh"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "jose": "^6.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}
