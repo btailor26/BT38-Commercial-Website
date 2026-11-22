@@ -1,3 +1,6 @@
+import {messagingApi} from './messaging.js';
+import {messageClient} from './message-client.js';
+import {adminClient} from './admin-client.js';
 import {partnerAccess,validBasis,modelTerms} from './partner-policy.js';
 import {applicationsApi,saveApplication} from './partner-applications.js';
 import {documentsApi,purgeDocuments} from './partner-documents.js';
@@ -50,15 +53,18 @@ async function api(req,env,url){
  return json({error:'Not found'},404);
 }
 export default {async scheduled(_controller,env,ctx){if(!env.WEBSITE_DATABASE_URL)return;const legacy=env.BUCKET,privateStore=env.PRIVATE_UPLOADS||(typeof legacy?.head==='function'?legacy:undefined);const task=purgeDocuments({...env,PRIVATE_UPLOADS:privateStore,BUCKET:eventStore(new NeonRecordStore(env.WEBSITE_DATABASE_URL,legacy))});if(ctx?.waitUntil)ctx.waitUntil(task);else await task;},async fetch(req,env,ctx){const url=new URL(req.url);try{
+ if(url.pathname==='/messages.js')return new Response('('+messageClient.toString()+')();',{headers:{...HEADERS,'Content-Type':'application/javascript'}});
+ if(url.pathname==='/admin-workspace.js')return new Response('('+adminClient.toString()+')();',{headers:{...HEADERS,'Content-Type':'application/javascript'}});
  if(url.pathname==='/portal.js')return new Response('('+portalClient.toString()+')();',{headers:{...HEADERS,'Content-Type':'application/javascript'}});
  if(url.pathname==='/api/portal/faqs')return json({items:FAQS});
  if(url.pathname.startsWith('/api/auth/'))return await googleAuthApi(req,env,url,{json,body});
  if(url.pathname==='/google-auth.js')return new Response(GOOGLE_BROWSER_SCRIPT,{headers:{...HEADERS,'Content-Type':'application/javascript'}});
- const customerRoute=url.pathname.startsWith('/api/portal/')||url.pathname==='/api/submit'||(url.pathname.startsWith('/api/customer/')&&!url.pathname.startsWith('/api/customer/admin/'))||url.pathname.startsWith('/api/referral/')||url.pathname==='/api/partner/profile'||['/api/checkout/create','/api/checkout/status','/api/checkout/invoice'].includes(url.pathname);
+ const customerRoute=url.pathname.startsWith('/api/admin')||url.pathname.startsWith('/api/customer/admin/')||url.pathname.startsWith('/api/portal/')||url.pathname==='/api/submit'||(url.pathname.startsWith('/api/customer/')&&!url.pathname.startsWith('/api/customer/admin/'))||url.pathname.startsWith('/api/referral/')||url.pathname==='/api/partner/profile'||['/api/checkout/create','/api/checkout/status','/api/checkout/invoice'].includes(url.pathname);
  if(env.CUSTOMER_AUTH_PROVIDER==='google'&&customerRoute){const who=await googleIdentity(req,env,url),headers=new Headers(req.headers);for(const key of ['oai-authenticated-user-id','oai-authenticated-user-email','oai-authenticated-user-full-name'])headers.delete(key);if(who){headers.set('oai-authenticated-user-id',who.id);headers.set('oai-authenticated-user-email',who.email);}req=new Request(req,{headers});}
  const legacy=env.BUCKET;if(!env.PRIVATE_UPLOADS&&typeof legacy?.head==='function')env={...env,PRIVATE_UPLOADS:legacy};if(env.WEBSITE_DATABASE_URL)env={...env,BUCKET:new NeonRecordStore(env.WEBSITE_DATABASE_URL,legacy)};
  env={...env,BUCKET:eventStore(env.BUCKET)};
  if(url.pathname.includes('/documents')&&(url.pathname.startsWith('/api/portal/partner/')||url.pathname.startsWith('/api/admin/partners/')))return await documentsApi(req,env,url,{json,body,digest,ADMIN});
+ if(url.pathname.startsWith('/api/portal/messages')||url.pathname.startsWith('/api/admin/messages'))return await messagingApi(req,env,url,{json,body,digest,ADMIN});
  if(['/api/portal/partner/application','/api/portal/partner/accept-terms'].includes(url.pathname)||url.pathname.startsWith('/api/admin/partners/'))return await applicationsApi(req,env,url,{json,body,digest,ADMIN});
  if(url.pathname.startsWith('/api/portal/')||url.pathname.startsWith('/api/admin/commercial'))return await commercialApi(req,env,url,{json,body,digest,ADMIN});
  if(url.pathname==='/api/storage/import'&&req.method==='POST'){if(env.WEBSITE_IMPORT_ENABLED!=='true'||!env.WEBSITE_DATABASE_URL)return json({error:'Not found.'},404);if(req.headers.get('origin')&&req.headers.get('origin')!==url.origin)return json({error:'Invalid origin.'},403);return json(await env.BUCKET.importLegacy());}

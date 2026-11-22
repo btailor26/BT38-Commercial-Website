@@ -2,7 +2,7 @@ import {applicationInput} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 const data=new Map(),origin='https://site.example.invalid';
-const BUCKET={async get(k){const v=data.get(k);return v===undefined?null:{text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,o){if(o?.onlyIf&&data.has(k))return null;data.set(k,v);return {key:k}},async list({prefix}){return {objects:[...data.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
+const BUCKET={async get(k){const v=data.get(k);return v===undefined?null:{etag:v,text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,o){if(o?.onlyIf&&data.has(k))return null;data.set(k,v);return {key:k}},async batch(writes,events){if(writes.some(w=>w.etag==null?data.has(w.key):data.get(w.key)!==w.etag))return false;for(const w of [...writes,...events])data.set(w.key,w.body);return true;},async list({prefix}){return {objects:[...data.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
 const env={BUCKET,ADMIN_EMAIL:'owner@example.invalid'};
 async function call(path,method='GET',value,who='alice',extra={}){const headers={origin,'Content-Type':'application/json',...extra};if(who){headers['oai-authenticated-user-id']=who;headers['oai-authenticated-user-email']=who+'@example.invalid';}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
 assert.equal((await call('/api/customer/account','GET',null,null)).status,401);

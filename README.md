@@ -108,3 +108,11 @@ Approval-only applications, optional private supporting documents, the alternati
 branch. See [PARTNER_APPROVAL_AND_UPLOADS.md](docs/PARTNER_APPROVAL_AND_UPLOADS.md)
 for access rules, scanner quarantine, storage/retention configuration and tests.
 **Do not deploy this update to production until Bhavin approves it.**
+
+### Administrator dashboard and dashboard messaging
+
+`/admin` now provides complete application review and a private internal inbox.
+Applicants and partners use Messages in `/partner`; customers use Customer
+Messages in `/account`. Application decisions and information requests create
+internal messages atomically, without email. Existing applications remain subject
+to explicit administrator approval. See [administrator and messaging operations](docs/ADMINISTRATOR_MESSAGES.md).
