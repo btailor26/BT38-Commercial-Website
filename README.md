@@ -100,3 +100,11 @@ customer enquiry/quotation view and FAQs are implemented. See
 [COMMERCIAL_PORTAL.md](docs/COMMERCIAL_PORTAL.md) for access boundaries, event-driven
 updates, commission rules and configuration still required for live checkout.
 The additional live read-only Neon check is **not** part of routine npm test.
+
+## Approval-based partnership update (prepared for review)
+
+Approval-only applications, optional private supporting documents, the alternative
+5%/10% models, six-indicator overview and training are implemented on the development
+branch. See [PARTNER_APPROVAL_AND_UPLOADS.md](docs/PARTNER_APPROVAL_AND_UPLOADS.md)
+for access rules, scanner quarantine, storage/retention configuration and tests.
+**Do not deploy this update to production until Bhavin approves it.**

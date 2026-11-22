@@ -1,3 +1,4 @@
+import {applicationInput,configuredTerms,approveFixture} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -21,8 +22,8 @@ assert.equal((await call('/api/storage/import','POST',{},'')).status,403);
 const redirect=await call('/signin-with-chatgpt?returnTo=/admin');assert.equal(redirect.status,302);assert.equal(new URL(redirect.headers.get('location')).pathname,'/auth/google');
 assert.equal((await call('/api/customer/account','POST',{name:'Alice',company:'Example',country:'GB'},alice)).status,200);
 assert.equal((await (await call('/api/customer/account','GET',null,alice)).json()).profile.owner,'google:alice-sub');
-assert.equal((await call('/api/partner/profile','POST',{name:'Alice',country:'GB'},alice)).status,200);
-assert.equal((await call('/api/referral/account','GET',null,alice)).status,200);
+assert.equal((await call('/api/partner/profile','POST',applicationInput({name:'Alice',country:'GB'}),alice)).status,200);
+const terms={...configuredTerms,version:'local-fixture'};await env.BUCKET.put('referrals/settings.json',JSON.stringify(terms));await approveFixture(env.BUCKET,'google:alice-sub',terms);assert.equal((await call('/api/referral/account','GET',null,alice)).status,200);
 const lead={kind:'enquiry',id:crypto.randomUUID(),started:Date.now()-5000,privacy:true,name:'Local test',company:'Example',email:'lead@example.invalid',country:'UK',service:'API Integration',description:'Test only'};
 assert.equal((await call('/api/submit','POST',lead)).status,200);
 const reopened=new FileStore(dir);assert.ok(await reopened.get('records/enquiry/'+lead.id+'.json'));

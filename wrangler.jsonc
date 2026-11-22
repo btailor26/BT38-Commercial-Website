@@ -2,6 +2,7 @@
   "name": "bt38-commercial-website",
   "main": "dist/server/index.js",
   "compatibility_date": "2026-11-17",
+  "triggers": {"crons": ["0 3 * * *"]},
   "build": {"command": "npm run build"},
   "vars": {"CUSTOMER_AUTH_PROVIDER": "google", "WEBSITE_IMPORT_ENABLED": "false", "CHECKOUT_ENABLED": "false"}
 }

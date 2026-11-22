@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "aws4fetch": "^1.0.20",
+    "cfb": "^1.2.2",
+    "fflate": "^0.8.3",
     "jose": "^6.1.0"
   },
   "devDependencies": {

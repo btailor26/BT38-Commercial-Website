@@ -1,3 +1,4 @@
+import {configuredTerms,approveFixture} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import worker from '../worker/index.js';
@@ -17,7 +18,8 @@ globalThis.fetch=async(url,opts)=>{if(url==='https://merchant.revolut.com/api/or
 await call('/api/customer/account','POST',{company:'Buyer company',name:'Buyer',country:'GB'});
 const order={id:crypto.randomUUID(),token:'a'.repeat(64),product:'support',company:'Buyer <script>',name:'Buyer',email:'buyer@example.invalid',address:'1 Sample Street',city:'Example',postcode:'AB1 2CD',country:'GB',accepted:true,amount:1};
 const partnerCode='BT38-'+'C'.repeat(20);
-objects.set('referrals/partners/'+partnerCode+'.json',JSON.stringify({code:partnerCode,email:'partner@example.invalid',owner:'partner',status:'active',terms:{commission_bps:500,version:'test-v1',hold_days:14,payout_days:15}}));order.referral_code=partnerCode;
+const referralTerms={...configuredTerms,version:'test-v1',hold_days:14};await BUCKET.put('referrals/settings.json',JSON.stringify(referralTerms));await approveFixture(BUCKET,'partner',referralTerms);
+objects.set('referrals/partners/'+partnerCode+'.json',JSON.stringify({code:partnerCode,email:'partner@example.invalid',owner:'partner',status:'active',terms:{...referralTerms,commission_model:'lead_introduction'}}));order.referral_code=partnerCode;
 try{
 assert.equal((await call('/api/checkout/create','POST',{...order,country:'ZZ'})).status,400);
 assert.equal((await call('/api/checkout/create','POST',{...order,company:''})).status,400);

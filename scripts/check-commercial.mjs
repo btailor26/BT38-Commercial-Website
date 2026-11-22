@@ -1,3 +1,4 @@
+import {applicationInput,configuredTerms} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -13,7 +14,7 @@ const cookie=async(sub,email)=>'__Host-bt38-google='+await new SignJWT({purpose:
 const admin=await cookie('admin','admin@gmail.com'),alice=await cookie('alice','alice@gmail.com'),bob=await cookie('bob','bob@gmail.com'),customer=await cookie('buyer','buyer@customer.invalid');
 async function call(path,method='GET',data,c='',extra={}){return worker.fetch(new Request(origin+path,{method,headers:{origin,cookie:c,'Content-Type':'application/json',...extra},...(data?{body:JSON.stringify(data)}:{})}),env,{});}
 async function get(path,c=alice){const r=await call(path,'GET',null,c);assert.equal(r.status,200,path);return r.json();}
-const profile={name:'Alice',company:'Alice agency',phone:'0123456789',country:'GB',website:'https://example.invalid',specialism:'B2B introductions',network:'Existing professional network',accepted:true};
+const profile={...applicationInput({}),name:'Alice',company:'Alice agency',phone:'0123456789',country:'GB',website:'https://example.invalid',specialism:'B2B introductions',network:'Existing professional network',accepted:true};
 const lead=(email='buyer@customer.invalid',company='Buyer company')=>({id:crypto.randomUUID(),company,name:'Buyer',email,phone:'',country:'GB',website:'',service:'API Integration',requirements:'Connect the existing order platform.',description:'Customer requested a discussion about connecting orders.',additional_notes:'',authorised:true});
 let signal,reader;
 try{
@@ -24,15 +25,19 @@ try{
  assert.equal((await call('/api/portal/partner/profile','POST',profile,alice)).status,200);let snapshot=await get('/api/portal/partner');assert.equal(snapshot.profile.created_at,prior.created_at);assert.equal(snapshot.profile.custom_existing,'preserved');assert.equal(snapshot.link,null);
  assert.equal((await call('/api/customer/account','POST',{company:'Alice customer company',name:'Alice',country:'GB'},alice)).status,200);
  assert.equal((await get('/api/portal/partner')).profile.owner,'google:alice');assert.equal((await get('/api/customer/account')).profile.owner,'google:alice');
+ assert.equal((await call('/api/portal/referrals','POST',lead(),alice)).status,403);
+ const terms={...configuredTerms,contact:origin+'/contact'};const tr=await call('/api/admin/referral-settings','POST',terms,admin);assert.equal(tr.status,200);const published=await tr.json();
+ const decision={owner:'google:alice',expected_status:'submitted',status:'approved',approved_model:'lead_introduction',confirmed:true,explanation:'Local approved application after review.'};
+ assert.equal((await call('/api/admin/partners/review','POST',decision,admin)).status,200);
+ assert.equal((await call('/api/portal/referrals','POST',lead(),alice)).status,403);
+ assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:'stale'},alice)).status,409);
+ assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:published.version},alice)).status,200);
+ assert.equal((await call('/api/portal/partner/profile','POST',{...profile,name:'Bob'},bob)).status,200);
+ assert.equal((await call('/api/admin/partners/review','POST',{...decision,owner:'google:bob'},admin)).status,200);
+ assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:published.version},bob)).status,200);
  assert.equal((await call('/api/portal/referrals','POST',{...lead(),authorised:false},alice)).status,400);
- const pending=lead('pending@buyer.invalid','Pending buyer');let result=await call('/api/portal/referrals','POST',pending,alice);assert.equal(result.status,201);let first=(await result.json()).referral;assert.equal(first.terms_pending,true);
- let action={id:first.id,expected_stage:'submitted',stage:'under_review',explanation:'Reviewing the introduction.'};assert.equal((await call('/api/admin/commercial/update','POST',action,alice)).status,403);assert.equal((await call('/api/admin/commercial/update','POST',action,admin)).status,200);
- assert.equal((await call('/api/admin/commercial/update','POST',{...action,expected_stage:'under_review',stage:'qualified'},admin)).status,409);
- const terms={commission_bps:500,hold_days:0,payout_days:15,operator:'Local test business',contact:origin+'/contact',scope:'Eligible software project receipts after completed delivery and customer acceptance.',enabled:true,confirmed:true};const tr=await call('/api/admin/referral-settings','POST',terms,admin);assert.equal(tr.status,200);const published=await tr.json();
- assert.equal((await call('/api/portal/partner/profile','POST',{...profile,terms_version:'stale'},alice)).status,409);
- assert.equal((await call('/api/portal/partner/profile','POST',{...profile,terms_version:published.version,accept_pending:true},alice)).status,200);
- assert.equal((await call('/api/portal/partner/profile','POST',{...profile,name:'Bob',terms_version:published.version},bob)).status,200);
- snapshot=await get('/api/portal/partner');assert.ok(snapshot.link);assert.equal(snapshot.referrals[0].terms_pending,false);
+ snapshot=await get('/api/portal/partner');assert.ok(snapshot.link);
+ let result;
  signal=new AbortController();const stream=await worker.fetch(new Request(origin+'/api/portal/events?after='+encodeURIComponent(snapshot.cursor),{headers:{cookie:alice},signal:signal.signal}),env,{});assert.equal(stream.headers.get('Content-Type'),'text/event-stream');reader=stream.body.getReader();await reader.read();
  const d=lead();result=await call('/api/portal/referrals','POST',d,alice);assert.equal(result.status,201);const saved=(await result.json()).referral;assert.equal((await call('/api/portal/referrals','POST',d,alice)).status,200);assert.equal((await get('/api/portal/partner')).referrals.filter(x=>x.id===d.id).length,1);
  let eventText='';for(let i=0;i<20&&!eventText.includes(d.id);i++){let timer;const event=await Promise.race([reader.read(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Push event not delivered')),2000)})]);clearTimeout(timer);eventText+=new TextDecoder().decode(event.value);}assert.ok(eventText.includes(d.id),eventText);assert.ok(!eventText.includes('buyer@customer.invalid'));signal.abort();await reader.cancel();

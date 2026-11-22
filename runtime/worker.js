@@ -2,7 +2,7 @@
 import application from '../worker/index.js';
 import {googleIdentity} from '../worker/google-auth.js';
 const identityHeaders=['oai-authenticated-user-id','oai-authenticated-user-email','oai-authenticated-user-full-name'];
-export default {async fetch(request,environment,context={}){
+export default {async scheduled(controller,env,ctx){return application.scheduled(controller,env,ctx);},async fetch(request,environment,context={}){
  const env={...environment,CUSTOMER_AUTH_PROVIDER:'google'},url=new URL(request.url);
  if(['/signin-with-chatgpt','/signout-with-chatgpt'].includes(url.pathname)){
   const target=url.searchParams.get('returnTo')||url.searchParams.get('return_to')||'/admin';

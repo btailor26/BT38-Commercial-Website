@@ -1,3 +1,4 @@
+import {applicationInput} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 const data=new Map(),origin='https://site.example.invalid';
@@ -30,7 +31,7 @@ let support=await (await call('/api/customer/support')).json();assert.equal(supp
 assert.equal((await call('/api/customer/support/reply','POST',{id,message:'Here is the order reference.'})).status,200);
 assert.equal((await call('/api/customer/admin/onboarding','POST',{owner:overview.customers.find(c=>c.name==='Alice').owner,stage:'Live',handover_at:'2026-11-18'},'owner')).status,200);
 assert.equal((await (await call('/api/customer/account')).json()).onboarding.stage,'Live');
-assert.equal((await call('/api/partner/profile','POST',{name:'Alice',company:'Referral partner',country:'GB',iban:'not-stored'})).status,200);
+assert.equal((await call('/api/partner/profile','POST',applicationInput({name:'Alice',company:'Referral partner',country:'GB',iban:'not-stored'}))).status,200);
 d=await (await call('/api/partner/profile')).json();assert.equal(d.profile.company,'Referral partner');assert.equal(d.profile.iban,undefined);
 assert.equal((await (await call('/api/partner/profile','GET',null,'bob')).json()).profile,null);
 assert.equal((await (await call('/api/customer/billing')).json()).orders.length,0);

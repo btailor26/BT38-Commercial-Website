@@ -1,16 +1,17 @@
+import {configuredTerms,approveFixture} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 const objects=new Map();
-const BUCKET={async get(k){const v=objects.get(k);return v===undefined?null:{text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,opts){if(opts?.onlyIf&&objects.has(k))return null;objects.set(k,v);return {key:k}},async delete(k){objects.delete(k)},async list({prefix}){return {objects:[...objects.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
+const BUCKET={async get(k){const v=objects.get(k);return v===undefined?null:{etag:v,text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,opts){if(opts?.onlyIf?.etagDoesNotMatch==='*'&&objects.has(k))return null;objects.set(k,v);return {key:k}},async delete(k){objects.delete(k)},async list({prefix}){return {objects:[...objects.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
 const env={BUCKET,ADMIN_EMAIL:'owner@example.invalid'},origin='https://site.example.invalid';
 async function call(path,method='GET',value,who){const headers={origin,'Content-Type':'application/json'};if(who){headers['oai-authenticated-user-id']=who;headers['oai-authenticated-user-email']=who+'@example.invalid';}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
 async function read(path,who){const r=await call(path,'GET',null,who);assert.equal(r.status,200);return r.json();}
 assert.equal((await read('/api/referral/terms')).enabled,false);
-assert.equal((await call('/api/referral/register','POST',{name:'Partner',accepted:true,version:'unpublished'},'alice')).status,409);
+assert.equal((await call('/api/referral/register','POST',{name:'Partner',accepted:true,version:'unpublished'},'alice')).status,403);
 assert.equal((await call('/api/referral/register','POST',{})).status,401);
 assert.equal((await call('/api/admin/referral-settings','POST',{},'alice')).status,403);
-const config={commission_bps:1000,hold_days:0,payout_days:15,operator:'Example operator',contact:origin+'/contact',scope:'First eligible software project payment, excluding support and pass-through costs.',enabled:true,confirmed:true};
-let r=await call('/api/admin/referral-settings','POST',config,'owner');assert.equal(r.status,200);const terms=await r.json();
+const config={...configuredTerms,commission_bps:500,hold_days:0,payout_days:15,operator:'Example operator',contact:origin+'/contact',scope:'First eligible software project payment, excluding support and pass-through costs.',enabled:true,confirmed:true};
+let r=await call('/api/admin/referral-settings','POST',config,'owner');assert.equal(r.status,200);const terms=await r.json();await approveFixture(BUCKET,'alice',terms,'full_sales');await approveFixture(BUCKET,'bob',terms);
 assert.equal((await call('/api/referral/register','POST',{name:'Alice',accepted:true,version:'stale'},'alice')).status,400);
 r=await call('/api/referral/register','POST',{name:'Alice',accepted:true,version:terms.version},'alice');assert.equal(r.status,200);const partner=await r.json();
 assert.match(partner.code,/^BT38-[A-F0-9]{20}$/);
@@ -31,7 +32,7 @@ assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,net_pe
 let account=await read('/api/referral/account','alice');assert.equal(account.entries.length,1);assert.equal((await read('/api/referral/account','bob')).entries.length,0);
 assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,payment_reference:'refund-1',original_reference:'receipt-1',type:'refund',net_pence:-10000},'owner')).status,200);
 assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,payment_reference:'refund-2',original_reference:'receipt-1',type:'refund',net_pence:-49900},'owner')).status,400);
-await call('/api/admin/referral-settings','POST',{...config,commission_bps:2000},'owner');
+const changedTerms=await (await call('/api/admin/referral-settings','POST',{...config,commission_bps:500},'owner')).json();await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:changedTerms.version},'alice');
 assert.equal((await read('/api/referral/account','alice')).partner.terms.commission_bps,1000);
 assert.equal((await call('/api/admin/referral-paid','POST',{id:payment.id,payout_reference:'bank-transfer-1'},'owner')).status,409);
 assert.equal((await read('/api/referral/account','alice')).entries.find(x=>x.id===payment.id).status,'recorded');
