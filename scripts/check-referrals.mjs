@@ -14,7 +14,7 @@ assert.equal((await call('/api/referral/register','POST',{name:'Partner',accepte
 assert.equal((await call('/api/referral/register','POST',{})).status,401);
 assert.equal((await call('/api/admin/referral-settings','POST',{},'alice')).status,403);
 const config={...configuredTerms,commission_bps:500,hold_days:0,payout_days:15,operator:'Example operator',contact:origin+'/contact',scope:'First eligible software project payment, excluding support and pass-through costs.',enabled:true,confirmed:true};
-let r=await call('/api/admin/referral-settings','POST',config,'owner');assert.equal(r.status,200);const terms=await r.json();await approveFixture(BUCKET,'alice',terms,'full_sales');await approveFixture(BUCKET,'bob',terms);
+let r=await call('/api/admin/referral-settings','POST',config,'owner');assert.equal(r.status,200);const terms=await r.json();await approveFixture(BUCKET,'google:alice',terms,'full_sales');await approveFixture(BUCKET,'google:bob',terms);
 assert.equal((await call('/api/referral/register','POST',{name:'Alice',accepted:true,version:'stale'},'alice')).status,400);
 r=await call('/api/referral/register','POST',{name:'Alice',accepted:true,version:terms.version},'alice');assert.equal(r.status,200);const partner=await r.json();
 assert.match(partner.code,/^BT38-[A-F0-9]{20}$/);
