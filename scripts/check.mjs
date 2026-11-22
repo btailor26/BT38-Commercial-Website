@@ -3,7 +3,9 @@ import worker from '../worker/index.js';
 const data=new Map();const BUCKET={async get(k){const v=data.get(k);return v===undefined?null:{text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v){data.set(k,v)},async delete(k){data.delete(k)},async list({prefix}){return {objects:[...data.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
 const env={BUCKET,ADMIN_EMAIL:'admin@example.invalid'},origin='https://test.invalid';
 async function call(path,method='GET',value,auth){let headers={origin,'Content-Type':'application/json'};if(auth){headers['oai-authenticated-user-id']='test-admin';headers['oai-authenticated-user-email']=auth;}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
-for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/privacy','/admin'])assert.equal((await call(path)).status,200,path);
+for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/privacy'])assert.equal((await call(path)).status,200,path);
+const adminRedirect=await call('/admin');assert.equal(adminRedirect.status,302,'Unauthenticated administrator sign-in redirect');assert.equal(adminRedirect.headers.get('location'),origin+'/auth/google?returnTo=%2Fadmin');
+assert.equal((await call('/admin','GET',null,'unauthorised@example.invalid')).status,302,'Identity headers alone must not bypass administrator login');
 assert.equal((await call('/api/admin')).status,401);assert.equal((await call('/api/admin','GET',null,'unauthorised@example.invalid')).status,403);
 let d={kind:'enquiry',id:crypto.randomUUID(),started:Date.now()-5000,privacy:true,name:'Test enquiry',company:'QA',email:'qa@example.invalid',country:'UK',service:'API Integration',description:'Local-only test'};
 assert.equal((await call('/api/submit','POST',{...d,email:'invalid'})).status,400);assert.equal((await call('/api/submit','POST',{...d,company_fax:'spam'})).status,400);
