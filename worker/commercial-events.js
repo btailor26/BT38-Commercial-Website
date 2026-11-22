@@ -6,7 +6,7 @@ export async function scan(store,prefix){let result=[],cursor;do{const p=await s
 async function makeEvent(target,key,value){
  const item=JSON.parse(value),audience=[];let referral=item;
  if(key.startsWith('referrals/ledger/')){const obj=await target.get('records/enquiry/'+item.enquiry_id+'.json');referral=obj?await obj.json():{};const p=item.code?await target.get('referrals/partners/'+item.code+'.json'):null;if(p)audience.push((await p.json()).owner);}
- if(item.owner&&/^(messages\/)/.test(key))audience.push(item.owner);
+ if(item.owner&&/^(messages\/)/.test(key))audience.push(item.owner);if(item.partner_owner&&key.startsWith('messages/'))audience.push(item.partner_owner);
  if(item.owner&&/^(referrals\/applications\/|referrals\/documents\/)/.test(key))audience.push(item.owner);if(referral.referral?.owner)audience.push(referral.referral.owner);if(referral.customer_owner)audience.push(referral.customer_owner);
  const event={id:crypto.randomUUID(),date:new Date().toISOString(),key,referral_id:referral.id||null,audience:[...new Set(audience)],kind:key.startsWith('messages/read/')?'message_read':key.startsWith('messages/items/')?'message':key.startsWith('messages/threads/')?'conversation':key==='referrals/settings.json'?'programme':key.startsWith('referrals/ledger/')?'commission':key.startsWith('referrals/applications/')?'application':key.startsWith('referrals/documents/')?'document':'referral'};
  return {key:'referrals/events/'+event.date+'-'+event.id+'.json',body:JSON.stringify(event),event};

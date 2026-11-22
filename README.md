@@ -116,3 +116,9 @@ Applicants and partners use Messages in `/partner`; customers use Customer
 Messages in `/account`. Application decisions and information requests create
 internal messages atomically, without email. Existing applications remain subject
 to explicit administrator approval. See [administrator and messaging operations](docs/ADMINISTRATOR_MESSAGES.md).
+
+### Connected commercial workflow
+
+Sales & Enquiries in the approved partner portal, Sales & Quotations in `/admin`,
+and Enquiries, sales & quotations in `/account` share the canonical enquiry.
+See [workflow, pricing, permissions and deployment notes](docs/CONNECTED_COMMERCIAL_WORKFLOW.md).
