@@ -1,5 +1,42 @@
 # Independent deployment
 
+## Planned shared Fly deployment: www.bt38inv.com
+
+Target canonical commercial origin: `https://www.bt38inv.com`.
+The apex `https://bt38inv.com` should redirect to that canonical origin only
+once its existing traffic and integrations have been audited. The inventory UI
+is intended for `https://app.bt38inv.com`; keep `bt38-prod.fly.dev` available
+as a recovery address. These are **planned** routes, not deployed routes.
+
+Both applications must share the **existing** `bt38-prod` Fly machine; do not
+create another Fly machine or deploy this repository's standalone Dockerfile
+onto `bt38-prod`, because doing so would replace the inventory runtime.
+Build a combined image from the pinned inventory and commercial source revisions,
+retain Gunicorn on internal port 5000 and Node on internal port 3000, and add a
+small hostname-aware reverse proxy on the Fly service port. Start and supervise
+both processes; preserve signals, logs, webhook paths and health checks. Route
+`www.bt38inv.com` to Node, and `app.bt38inv.com` and the existing
+`bt38-prod.fly.dev` to Gunicorn. Do not infer a destination from a request path
+alone or expose either internal port publicly.
+
+Before switching DNS or certificates, verify the combined image in isolation:
+run the existing inventory tests and commercial `npm test`, `npm run build`,
+`npm run validate`; verify the proxy's Host routing and reject unknown hosts;
+check real inventory webhook reachability, website Google authentication, Neon
+website-only database access, partner/customer isolation and sandbox checkout.
+The website process requires `PUBLIC_ORIGIN=https://www.bt38inv.com` and its
+own website-only secrets. Existing inventory secrets must not be exposed to
+website requests or logs. Verify any webhook callback URLs before changing
+routing, and keep existing marketplace callback URLs working throughout.
+
+Measure the combined process tree's idle and peak RAM before deployment on the
+512 MB machine. An idle Node process does **not** sleep automatically, and
+Fly machine auto-stop cannot independently stop Node while Gunicorn remains
+running. Do not introduce speculative sleep/wake logic. Keep the prior Fly
+release available for rollback and monitor memory, CPU, Neon calls, website
+responses and marketplace webhooks for 48 hours after release. Do not merge
+branches or increase machine size without explicit approval.
+
 ## Node or Docker
 
 1. Use Node 22.12+ and `npm ci`, `npm test`, `npm run build`, `npm run validate`.
