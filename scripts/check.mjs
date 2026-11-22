@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
+import {SignJWT} from 'jose';
 import worker from '../worker/index.js';
 const data=new Map();const BUCKET={async get(k){const v=data.get(k);return v===undefined?null:{text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v){data.set(k,v)},async delete(k){data.delete(k)},async list({prefix}){return {objects:[...data.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
-const env={BUCKET,ADMIN_EMAIL:'admin@example.invalid'},origin='https://test.invalid';
-async function call(path,method='GET',value,auth){let headers={origin,'Content-Type':'application/json'};if(auth){headers['oai-authenticated-user-id']='test-admin';headers['oai-authenticated-user-email']=auth;}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
+const env={BUCKET,ADMIN_EMAIL:'admin@example.invalid',GOOGLE_CLIENT_ID:'test-client.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:'local-smoke-test-signing-key-'.repeat(3)},origin='https://test.invalid';
+async function testSession(email){return '__Host-bt38-google='+await new SignJWT({purpose:'session',email}).setProtectedHeader({alg:'HS256'}).setSubject('smoke-test-'+email).setIssuer('bt38-website').setAudience(origin).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.GOOGLE_SESSION_SIGNING_KEY));}
+const adminCookie=await testSession(env.ADMIN_EMAIL),visitorCookie=await testSession('unauthorised@example.invalid');
+async function call(path,method='GET',value,auth){let headers={origin,'Content-Type':'application/json'};if(auth)headers.cookie=auth===env.ADMIN_EMAIL?adminCookie:visitorCookie;return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
 for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/privacy'])assert.equal((await call(path)).status,200,path);
 const adminRedirect=await call('/admin');assert.equal(adminRedirect.status,302,'Unauthenticated administrator sign-in redirect');assert.equal(adminRedirect.headers.get('location'),origin+'/auth/google?returnTo=%2Fadmin');
-assert.equal((await call('/admin','GET',null,'unauthorised@example.invalid')).status,302,'Identity headers alone must not bypass administrator login');
+assert.equal((await call('/admin','GET',null,'unauthorised@example.invalid')).status,403,'Signed non-admin must not access administrator page');
+assert.equal((await call('/admin','GET',null,env.ADMIN_EMAIL)).status,200,'Signed administrator must reach dashboard');
+assert.equal((await worker.fetch(new Request(origin+'/admin',{headers:{'oai-authenticated-user-id':'spoofed','oai-authenticated-user-email':env.ADMIN_EMAIL}}),env,{})).status,302,'Forged identity headers must not bypass sign-in');
 assert.equal((await call('/api/admin')).status,401);assert.equal((await call('/api/admin','GET',null,'unauthorised@example.invalid')).status,403);
 let d={kind:'enquiry',id:crypto.randomUUID(),started:Date.now()-5000,privacy:true,name:'Test enquiry',company:'QA',email:'qa@example.invalid',country:'UK',service:'API Integration',description:'Local-only test'};
 assert.equal((await call('/api/submit','POST',{...d,email:'invalid'})).status,400);assert.equal((await call('/api/submit','POST',{...d,company_fax:'spam'})).status,400);
