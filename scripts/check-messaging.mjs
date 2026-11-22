@@ -12,7 +12,8 @@ const json=async(path,c=alice)=>{const r=await call(path,'GET',undefined,c);asse
 const partner='/api/portal/messages?workspace=partner',customer='/api/portal/messages?workspace=customer',inbox='/api/admin/messages';
 let reader,controller;
 try{
- for(const path of ['/admin','/account','/partner']){const r=await call(path);assert.equal(r.status,200);const html=await r.text();assert.ok(html.includes('/messages.js'));}
+ for(const path of ['/account','/partner']){const r=await call(path);assert.equal(r.status,200);const html=await r.text();assert.ok(html.includes('/messages.js'));}
+assert.equal((await call('/admin')).status,403,'Partner cannot view administrator workspace');const adminPage=await call('/admin','GET',undefined,admin);assert.equal(adminPage.status,200);assert.ok((await adminPage.text()).includes('/messages.js'));
  for(const path of ['/messages.js','/admin-workspace.js','/portal.js'])new Function(await(await call(path)).text());
  assert.equal((await call(inbox)).status,403);assert.equal((await call(partner,'GET',undefined,'')).status,401);assert.equal((await call(inbox,'GET',undefined,'',{'oai-authenticated-user-id':'admin','oai-authenticated-user-email':'admin@gmail.com'})).status,401);
  const hostedEnv={...env,CUSTOMER_AUTH_PROVIDER:'google'};assert.equal((await hosted.fetch(new Request(origin+inbox,{headers:{'oai-authenticated-user-id':'fake-admin','oai-authenticated-user-email':'admin@gmail.com'}}),hostedEnv,{})).status,401);assert.equal((await hosted.fetch(new Request(origin+inbox,{headers:{cookie:admin}}),hostedEnv,{})).status,200);
