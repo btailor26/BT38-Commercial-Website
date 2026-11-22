@@ -1,10 +1,13 @@
 import {configuredTerms,approveFixture} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
+import {SignJWT} from 'jose';
 import worker from '../worker/index.js';
 const objects=new Map();
 const BUCKET={async get(k){const v=objects.get(k);return v===undefined?null:{etag:v,text:async()=>v,json:async()=>JSON.parse(v)}},async put(k,v,opts){if(opts?.onlyIf?.etagDoesNotMatch==='*'&&objects.has(k))return null;objects.set(k,v);return {key:k}},async delete(k){objects.delete(k)},async list({prefix}){return {objects:[...objects.keys()].filter(k=>k.startsWith(prefix)).map(key=>({key})),truncated:false}}};
-const env={BUCKET,ADMIN_EMAIL:'owner@example.invalid'},origin='https://site.example.invalid';
-async function call(path,method='GET',value,who){const headers={origin,'Content-Type':'application/json'};if(who){headers['oai-authenticated-user-id']=who;headers['oai-authenticated-user-email']=who+'@example.invalid';}return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
+const env={BUCKET,ADMIN_EMAIL:'owner@example.invalid',GOOGLE_CLIENT_ID:'test-referrals.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:'local-referral-session-key-'.repeat(3)},origin='https://site.example.invalid';
+async function session(who){const email=who==='owner'?env.ADMIN_EMAIL:who+'@example.invalid';return '__Host-bt38-google='+await new SignJWT({purpose:'session',email}).setProtectedHeader({alg:'HS256'}).setSubject(who).setIssuer('bt38-website').setAudience(origin).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.GOOGLE_SESSION_SIGNING_KEY));}
+const sessions={owner:await session('owner'),alice:await session('alice'),bob:await session('bob')};
+async function call(path,method='GET',value,who){const headers={origin,'Content-Type':'application/json'};if(who)headers.cookie=sessions[who];return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
 async function read(path,who){const r=await call(path,'GET',null,who);assert.equal(r.status,200);return r.json();}
 assert.equal((await read('/api/referral/terms')).enabled,false);
 assert.equal((await call('/api/referral/register','POST',{name:'Partner',accepted:true,version:'unpublished'},'alice')).status,403);
