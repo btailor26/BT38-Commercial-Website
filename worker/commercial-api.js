@@ -47,7 +47,7 @@ export async function commercialApi(req,env,url,h){const user=uid(req),adminPath
  if(path==='/api/portal/customer'&&req.method==='GET'){
   const cursor=new Date().toISOString()+'|';const referrals=(await scan(env.BUCKET,'records/enquiry/')).filter(r=>r.customer_owner===user);return h.json({referrals:referrals.map(customerView),cursor});
  }
- if(path==='/api/portal/referrals'&&req.method==='POST'){const access=await partnerAccess(env.BUCKET,user);if(!access.active)return h.json({error:access.reason},403);
+ if(path==='/api/portal/referrals'&&req.method==='POST'){const access=await partnerAccess(env.BUCKET,user);if(!access.active)return h.json({error:access.reason},403);if(access.application?.approved_model==='bt38_warm_lead')return h.json({error:'BT38-assigned warm-lead partners cannot submit or claim their own referrals. BT38 administration must assign an existing lead.'},403);
   const profile=await read(env.BUCKET,'referrals/profiles/'+await h.digest(user)+'.json');if(!profile?.application_terms)return h.json({error:'Open My Profile and save your experience and applicable terms acknowledgement first.'},409);
   const d=await h.body(req);if(!validId(d.id)||d.authorised!==true)return h.json({error:'Confirm you are authorised to share the customer’s details.'},400);
   const fields=['company','name','email','phone','country','website','service','requirements','description','additional_notes'];let clean={};for(const k of fields){if(typeof d[k]!=='string'||d[k].length>6000)return h.json({error:'Check the referral fields.'},400);clean[k]=d[k].trim();}if(['company','name','email','country','service','requirements','description'].some(k=>!clean[k])||!/^\S+@\S+\.\S+$/.test(clean.email))return h.json({error:'Complete the required customer details and a valid business email.'},400);
@@ -66,6 +66,17 @@ export async function commercialApi(req,env,url,h){const user=uid(req),adminPath
   if(!profile||profile.owner!==d.customer_owner||profile.email.toLowerCase()!==r.email.toLowerCase())return h.json({error:'The selected registered account must match this customer contact. No automatic email claim is allowed.'},409);
   if(r.customer_owner&&r.customer_owner!==d.customer_owner)return h.json({error:'This enquiry is already associated with a different identity.'},409);
   r.customer_owner=d.customer_owner;audit(r,state(r),'BT38 associated the registered customer account for project and quotation access.',user);await update(env.BUCKET,key,old,r);return h.json({referral:r});
+ }
+ if(path==='/api/admin/commercial/assign-warm-lead'&&req.method==='POST'){
+  const d=await h.body(req);if(!validId(d.id)||typeof d.partner_owner!=='string'||!d.partner_owner.startsWith('google:')||d.confirmed!==true||typeof d.explanation!=='string'||!d.explanation.trim()||d.explanation.length>2000)return h.json({error:'Select an existing lead, an approved warm-lead partner and provide an explanation.'},400);
+  const key='records/enquiry/'+d.id+'.json',old=await env.BUCKET.get(key);if(!old)return h.json({error:'Lead not found.'},404);const r=await old.json();
+  if(r.referral||r.lead_source==='Partner direct referral'||r.authorised_share)return h.json({error:'This lead already has partner attribution; it cannot be reassigned or stacked.'},409);
+  if(r.conflict&&!r.conflict.resolved)return h.json({error:'Resolve the lead ownership conflict before assignment.'},409);
+  if(d.expected_stage!==state(r)||!['submitted','under_review','qualified','contacted'].includes(state(r)))return h.json({error:'Refresh the lead and assign before commercial negotiations progress.'},409);
+  const access=await partnerAccess(env.BUCKET,d.partner_owner);if(!access.active||access.application?.approved_model!=='bt38_warm_lead'||access.terms?.models?.bt38_warm_lead!==500)return h.json({error:'Partner must be active and have accepted published 5% BT38 warm-lead terms.'},409);
+  const code=await codeFor(d.partner_owner,h),partner=await read(env.BUCKET,'referrals/partners/'+code+'.json');if(partner?.status!=='active')return h.json({error:'Active partner record is required.'},409);
+  const now=new Date().toISOString();r.lead_source='BT38 supplied warm lead';r.referral={owner:d.partner_owner,code,...snapshotTerms(modelTerms(access.terms,'bt38_warm_lead')),assigned_by:user,assigned_at:now,lead_origin:'BT38'};r.assigned=d.partner_owner;
+  audit(r,state(r),d.explanation.trim(),user,'admin');await update(env.BUCKET,key,old,r);return h.json({referral:r});
  }
  if(path==='/api/admin/commercial/update'&&req.method==='POST'){
   const d=await h.body(req);if(!validId(d.id)||typeof d.explanation!=='string'||!d.explanation.trim()||d.explanation.length>2000)return h.json({error:'Choose a referral and provide a partner-visible explanation.'},400);
