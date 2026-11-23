@@ -3,7 +3,7 @@ import {Readable} from 'node:stream';
 import worker from '../dist/server/index.js';
 import {FileStore} from './file-store.js';
 import {FileObjects} from './file-objects.js';
-const port=Number(process.env.PORT||3000),production=process.env.NODE_ENV==='production';
+const port=Number(process.env.PORT||3000),production=process.env.NODE_ENV==='production'||!!process.env.FLY_APP_NAME;
 if(production&&(!process.env.PUBLIC_ORIGIN?.startsWith('https://')||!process.env.WEBSITE_DATABASE_URL))throw Error('Production requires HTTPS PUBLIC_ORIGIN and the existing dedicated WEBSITE_DATABASE_URL.');
 const env={...process.env};if(!env.WEBSITE_DATABASE_URL){env.BUCKET=new FileStore(process.env.LOCAL_DATA_DIR||'.data');env.PRIVATE_UPLOADS=new FileObjects((process.env.LOCAL_DATA_DIR||'.data')+'/uploads');}
 http.createServer(async(req,res)=>{try{

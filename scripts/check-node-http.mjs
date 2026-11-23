@@ -6,6 +6,12 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {SignJWT} from 'jose';
 const built=spawnSync(process.execPath,['scripts/build-standalone.mjs'],{stdio:'inherit'});assert.equal(built.status,0);
+// Fly must never activate development disk storage, even with a bad NODE_ENV override.
+for(const environment of [{NODE_ENV:'production'},{NODE_ENV:'development',FLY_APP_NAME:'bt38-commercial-website'}]){
+ const result=spawnSync(process.execPath,['runtime/server.js'],{env:{...process.env,...environment,WEBSITE_DATABASE_URL:'',PUBLIC_ORIGIN:'https://www.bt38inv.com'},encoding:'utf8'});
+ assert.notEqual(result.status,0);assert.match(result.stderr,/Production requires HTTPS PUBLIC_ORIGIN/);
+ assert.doesNotMatch(result.stdout,/listening/);assert.doesNotMatch(result.stderr,/EACCES/);
+}
 const directory=await mkdtemp(join(tmpdir(),'bt38-node-')),port=43219,origin='https://node-test.example.invalid',key='local-only-node-session-'.repeat(3);
 const server=spawn(process.execPath,['runtime/server.js'],{env:{...process.env,PORT:String(port),NODE_ENV:'development',WEBSITE_DATABASE_URL:'',PUBLIC_ORIGIN:origin,LOCAL_DATA_DIR:directory,GOOGLE_CLIENT_ID:'local-test.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:key,ADMIN_EMAIL:'admin@gmail.com'},stdio:['ignore','pipe','pipe']});
 let abort,reader;

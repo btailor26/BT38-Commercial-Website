@@ -1,41 +1,31 @@
 # Independent deployment
 
-## Planned shared Fly deployment: www.bt38inv.com
+## Existing commercial Fly application
 
-Target canonical commercial origin: `https://www.bt38inv.com`.
-The apex `https://bt38inv.com` should redirect to that canonical origin only
-once its existing traffic and integrations have been audited. The inventory UI
-is intended for `https://app.bt38inv.com`; keep `bt38-prod.fly.dev` available
-as a recovery address. These are **planned** routes, not deployed routes.
+Deploy only `sites-full-source-handover` to `bt38-commercial-website` in `ams`
+using the existing Fly GitHub integration. Keep the branch unmerged. `fly.toml`
+pins the commercial app, Dockerfile, port 3000, HTTPS origin and disabled checkout.
+Never deploy this source to `bt38-prod` or modify the inventory runtime.
 
-Both applications must share the **existing** `bt38-prod` Fly machine; do not
-create another Fly machine or deploy this repository's standalone Dockerfile
-onto `bt38-prod`, because doing so would replace the inventory runtime.
-Build a combined image from the pinned inventory and commercial source revisions,
-retain Gunicorn on internal port 5000 and Node on internal port 3000, and add a
-small hostname-aware reverse proxy on the Fly service port. Start and supervise
-both processes; preserve signals, logs, webhook paths and health checks. Route
-`www.bt38inv.com` to Node, and `app.bt38inv.com` and the existing
-`bt38-prod.fly.dev` to Gunicorn. Do not infer a destination from a request path
-alone or expose either internal port publicly.
+Set `WEBSITE_DATABASE_URL` using the existing restricted `bt38inv_website_app`
+role and `bt38inv_website` database. Store it and the existing Google authentication
+configuration in Fly Secrets, never in Git. Fly Secrets override image/config
+values, so replace incorrect overrides with the exact values in `fly.toml`.
+Production and Fly startup both refuse missing Neon configuration; local `.data`
+storage is for development only. Do not fix a production Neon problem by enabling
+local disk storage or changing directory permissions.
 
-Before switching DNS or certificates, verify the combined image in isolation:
-run the existing inventory tests and commercial `npm test`, `npm run build`,
-`npm run validate`; verify the proxy's Host routing and reject unknown hosts;
-check real inventory webhook reachability, website Google authentication, Neon
-website-only database access, partner/customer isolation and sandbox checkout.
-The website process requires `PUBLIC_ORIGIN=https://www.bt38inv.com` and its
-own website-only secrets. Existing inventory secrets must not be exposed to
-website requests or logs. Verify any webhook callback URLs before changing
-routing, and keep existing marketplace callback URLs working throughout.
+Keep `CHECKOUT_ENABLED=false`. Do not rerun applied migrations or submit fake CRM
+records against production. Verify the release commit, machine health, existing
+record reads and Google sign-in before claiming readiness. Missing Google secrets
+leave sign-in unavailable rather than bypassing authentication.
 
-Measure the combined process tree's idle and peak RAM before deployment on the
-512 MB machine. An idle Node process does **not** sleep automatically, and
-Fly machine auto-stop cannot independently stop Node while Gunicorn remains
-running. Do not introduce speculative sleep/wake logic. Keep the prior Fly
-release available for rollback and monitor memory, CPU, Neon calls, website
-responses and marketplace webhooks for 48 hours after release. Do not merge
-branches or increase machine size without explicit approval.
+After verifying the commercial app is healthy, configure Fly certificates and
+Namecheap apex/www records using only this app's assigned public addresses.
+Preserve email, staging and inventory DNS. Use `https://www.bt38inv.com` as the
+canonical origin; add it to the existing Google web client's authorized JavaScript
+origins. This application uses Google Identity Services, not an OAuth redirect
+callback. Retain the original authorized origins and client/signing key.
 
 ## Node or Docker
 
