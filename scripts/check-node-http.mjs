@@ -1,3 +1,4 @@
+import http from 'node:http';
 import {applicationInput,configuredTerms} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
@@ -30,3 +31,12 @@ try{
  let content='';for(let i=0;i<20&&!content.includes(id);i++){let timer;const part=await Promise.race([reader.read(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('SSE did not stream through the Node adapter')),3000)})]);clearTimeout(timer);content+=new TextDecoder().decode(part.value);}assert.ok(content.includes(id));
  console.log('Passed: independent Node HTTP startup, authenticated profile/referral routes, incremental SSE response streaming and disconnect cleanup.');
 }finally{abort?.abort();try{await reader?.cancel();}catch{}server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));await rm(directory,{recursive:true,force:true});}
+
+const canonical=spawn(process.execPath,['runtime/server.js'],{env:{...process.env,PORT:String(port),NODE_ENV:'production',WEBSITE_DATABASE_URL:'postgresql://unused.invalid/test',PUBLIC_ORIGIN:'https://www.bt38inv.com'},stdio:['ignore','pipe','pipe']});
+try{
+ await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Canonical server did not start')),8000);canonical.stdout.on('data',d=>{if(d.toString().includes('listening')){clearTimeout(timer);resolve();}});canonical.once('exit',()=>reject(Error('Canonical server exited')));});
+ const response=await new Promise((resolve,reject)=>{http.get({hostname:'127.0.0.1',port,path:'/contact?service=API',headers:{Host:'bt38inv.com'}},r=>{r.resume();resolve(r);}).on('error',reject);});
+ assert.equal(response.statusCode,308);assert.equal(response.headers.location,'https://www.bt38inv.com/contact?service=API');
+ assert.equal((await fetch('http://127.0.0.1:'+port+'/',{headers:{Host:'bt38-commercial-website.fly.dev'}})).status,200);
+ console.log('Passed: apex canonical redirect preserves paths/queries; Fly preview stays available.');
+}finally{canonical.kill('SIGTERM');await new Promise(resolve=>canonical.once('exit',resolve));}

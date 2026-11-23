@@ -10,6 +10,7 @@ http.createServer(async(req,res)=>{try{
  const maximum=req.method==='POST'&&req.url.split('?')[0]==='/api/portal/partner/documents'?Math.min(20*1024*1024,Math.max(1024,Number(env.PARTNER_UPLOAD_MAX_BYTES)||10*1024*1024)):req.url.startsWith('/api/sales/import/parse')?2097152:req.url.startsWith('/api/sales/')?1600000:32768;let length=0,chunks=[];for await(const chunk of req){length+=chunk.length;if(length>maximum){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}
  const origin=process.env.PUBLIC_ORIGIN||'http://localhost:'+port;
  const target=new URL(req.url,origin);if(target.origin!==new URL(origin).origin){res.writeHead(400);res.end('Invalid request target');return;}
+ if(new URL(origin).hostname==='www.bt38inv.com'&&req.headers.host?.toLowerCase()==='bt38inv.com'){res.writeHead(308,{Location:target.href});res.end();return;}
  const headers=new Headers();for(const [k,v]of Object.entries(req.headers))if(v!==undefined&&!['host','connection','content-length','transfer-encoding'].includes(k))headers.set(k,Array.isArray(v)?v.join(','):v);
  const abort=new AbortController();res.on('close',()=>abort.abort());const request=new Request(target,{method:req.method,headers,signal:abort.signal,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
  const response=await worker.fetch(request,env,{waitUntil:promise=>promise.catch(()=>{})});
