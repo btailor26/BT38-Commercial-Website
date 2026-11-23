@@ -93,7 +93,10 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$FLY_API_TOKEN"
-          flyctl deploy --app bt38-commercial-website --config fly.toml --remote-only --strategy rolling
+          # Build on this GitHub-hosted runner; Depot registry authentication failed.
+          # No workstation build and no additional Fly builder app.
+          docker info >/dev/null
+          flyctl deploy --app bt38-commercial-website --config fly.toml --local-only --strategy rolling
       - name: Verify commercial website HTTP response
         shell: bash
         run: |
