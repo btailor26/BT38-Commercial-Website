@@ -59,7 +59,19 @@ export async function commercialApi(req,env,url,h){const user=uid(req),adminPath
   const now=new Date().toISOString(),r={...clean,id:d.id,reference:'BT38-R-'+d.id.replaceAll('-','').toUpperCase(),kind:'enquiry',date:now,updated:now,status:'New',lead_source:'Partner direct referral',sales:{source:['Telesales','LinkedIn','Direct contact','Website submission','Excel/CSV import','Other'].includes(d.source)?d.source:'Direct contact',stage:'New',activities:[],quotes:[],next_action:'BT38 will review this introduction.'},notes:'',assigned:'',authorised_share:{by:user,at:now},referral:{owner:user,code,...snapshotTerms(modelTerms(access.terms,access.application.approved_model))},conflict:conflict?{reason:'Existing lead, customer or competing introduction requires administrative review.',matches:duplicates.map(r=>r.id),existing_customer:customer}:null,progress:{stage:'submitted',next_action:conflict?'BT38 will review a possible duplicate or attribution conflict.':'BT38 will review this introduction.'},timeline:[{id:crypto.randomUUID(),reference:'BT38-R-'+d.id.replaceAll('-','').toUpperCase(),previous_status:null,new_status:'submitted',timestamp:now,actor:'Referring partner',actor_id:user,source:'partner',explanation:conflict?'Introduction received; a possible duplicate requires review.':'Introduction received for review.'}]};
   const result=await env.BUCKET.put(key,JSON.stringify(r),{onlyIf:{etagDoesNotMatch:'*'}});if(result===null)return h.json({error:'Submission already exists. Refresh your referrals.'},409);return h.json({referral:partnerView(r),duplicate:conflict},201);
  }
- if(path==='/api/admin/commercial'&&req.method==='GET')return h.json({customers:(await scan(env.BUCKET,'customers/accounts/')).map(({owner,name,company,email})=>({owner,name,company,email})),referrals:await scan(env.BUCKET,'records/enquiry/'),entries:await scan(env.BUCKET,'referrals/ledger/'),stages:LABELS,transitions:GRAPH,cursor:new Date().toISOString()+'|'});
+ if(path==='/api/admin/commercial'&&req.method==='GET'){
+  const applications=await scan(env.BUCKET,'referrals/applications/');
+  const eligiblePartners=[];
+  for(const application of applications){
+   if(application.status!=='approved'||application.approved_model!=='bt38_warm_lead'||typeof application.owner!=='string')continue;
+   const access=await partnerAccess(env.BUCKET,application.owner);
+   if(!access.active||access.terms?.models?.bt38_warm_lead!==500)continue;
+   const code=await codeFor(application.owner,h),partner=await read(env.BUCKET,'referrals/partners/'+code+'.json');
+   if(partner?.status!=='active')continue;
+   eligiblePartners.push({owner:application.owner,name:application.name||partner.name||'Approved partner',company:application.company||''});
+  }
+  return h.json({customers:(await scan(env.BUCKET,'customers/accounts/')).map(({owner,name,company,email})=>({owner,name,company,email})),eligiblePartners,referrals:await scan(env.BUCKET,'records/enquiry/'),entries:await scan(env.BUCKET,'referrals/ledger/'),stages:LABELS,transitions:GRAPH,cursor:new Date().toISOString()+'|'});
+ }
  if(path==='/api/admin/commercial/link-customer'&&req.method==='POST'){
   const d=await h.body(req);if(!validId(d.id)||typeof d.customer_owner!=='string'||d.confirmed!==true)return h.json({error:'Select and confirm the registered customer account.'},400);
   const key='records/enquiry/'+d.id+'.json',old=await env.BUCKET.get(key);if(!old)return h.json({error:'Enquiry not found.'},404);const r=await old.json(),profile=await read(env.BUCKET,'customers/accounts/'+await h.digest(d.customer_owner)+'.json');
