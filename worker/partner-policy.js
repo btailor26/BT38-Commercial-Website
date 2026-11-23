@@ -1,6 +1,6 @@
 export const CATEGORIES=['Digital marketing agency','B2B telemarketing or appointment-setting company','Lead generation agency','Business development consultant','Software developer or software development agency','Freelancer','Web development agency','IT consultancy','Sales agency','Other'];
 export const MODELS={lead_introduction:{bps:500,label:'5% Lead Introduction Partner'},full_sales:{bps:1000,label:'10% Full Sales Process Partner'}};
-export const APPLICATION_STATUSES=['submitted','under_review','more_information_required','approved','rejected','suspended'];
+export const APPLICATION_STATUSES=['submitted','under_review','more_information_required','awaiting_terms_acceptance','approved','rejected','suspended'];
 export const APPLICATION_TRANSITIONS={submitted:['under_review','more_information_required','approved','rejected'],under_review:['more_information_required','approved','rejected'],more_information_required:['under_review','approved','rejected'],approved:['suspended','under_review'],rejected:['under_review'],suspended:['under_review','approved','rejected']};
 export const hash=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 export const jsonRecord=async(store,key)=>{const item=await store.get(key);return item?item.json():null;};
