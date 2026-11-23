@@ -1,0 +1,109 @@
+name: Governed Commercial Fly Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production_deploy:
+        description: 'Type DEPLOY_GITHUB_COMMIT_TO_BT38_COMMERCIAL'
+        required: true
+        type: string
+      expected_commit:
+        description: 'Exact current sites-full-source-handover branch SHA'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bt38-commercial-website-governed-deploy
+  cancel-in-progress: false
+
+jobs:
+  source-deploy-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require exact unmerged commercial branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRM: ${{ inputs.confirm_production_deploy }}
+          EXPECTED: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRM" = "DEPLOY_GITHUB_COMMIT_TO_BT38_COMMERCIAL"
+          test "${{ github.ref_name }}" = "sites-full-source-handover"
+          test "$EXPECTED" = "${{ github.sha }}"
+          CURRENT="$(gh api "repos/${{ github.repository }}/branches/sites-full-source-handover" --jq '.commit.sha')"
+          test "$CURRENT" = "$EXPECTED"
+          echo "COMMERCIAL_SOURCE_APPROVED commit=$CURRENT"
+
+  audit:
+    needs: source-deploy-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact approved GitHub commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Verify commercial-only deployment source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Dockerfile
+          test -f fly.toml
+          test -f package-lock.json
+          grep -Eq '^app[[:space:]]*=[[:space:]]*"bt38-commercial-website"' fly.toml
+          grep -Eq '^primary_region[[:space:]]*=[[:space:]]*"ams"' fly.toml
+          grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"false"' fly.toml
+          grep -Eq 'PUBLIC_ORIGIN[[:space:]]*=[[:space:]]*"https://www.bt38inv.com"' fly.toml
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npm run validate
+
+  deploy:
+    needs: audit
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout exact audited commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify approved source and Fly app
+        shell: bash
+        env:
+          EXPECTED: ${{ inputs.expected_commit }}
+        run: |
+          set -euo pipefail
+          test "${{ github.ref_name }}" = "sites-full-source-handover"
+          test "$(git rev-parse HEAD)" = "$EXPECTED"
+          grep -Eq '^app[[:space:]]*=[[:space:]]*"bt38-commercial-website"' fly.toml
+      - name: Set up Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy commercial GitHub source to existing Fly app
+        shell: bash
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$FLY_API_TOKEN"
+          flyctl deploy --app bt38-commercial-website --config fly.toml --remote-only --strategy rolling
+      - name: Verify commercial website HTTP response
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            code="$(curl -L -sS -o /dev/null -w '%{http_code}' --max-time 20 https://www.bt38inv.com/ || true)"
+            if [ "$code" = "200" ]; then
+              echo "COMMERCIAL_HTTP_OK commit=${{ github.sha }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
