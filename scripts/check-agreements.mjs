@@ -18,6 +18,7 @@ try{
  for(const path of ['/admin-workspace.js','/portal.js','/referral.js','/sales.js'])new Function(await(await call(path)).text());
  assert.equal((await call('/api/admin/partners/agreement-templates','GET',undefined,alice)).status,403);assert.equal((await call('/api/admin/partners/agreements','GET',undefined,'')).status,401);
  await ok(call('/api/portal/partner/application','POST',applicationInput({approved_models:['full_sales'],agreement_ids:['forged'],terms_acceptance:{accepted_by:owner}}),alice));
+ assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:'legacy'},alice)).status,409);
  const initial=await ok(call('/api/portal/partner','GET',undefined,alice));assert.equal(initial.application.approved_models,undefined);assert.deepEqual(initial.agreements,[]);
  settings=await ok(call('/api/admin/referral-settings','POST',{...configuredTerms,models:{lead_introduction:500,bt38_warm_lead:500,full_sales:1000}}));assert.deepEqual(Object.keys(settings.models).sort(),['bt38_warm_lead','full_sales','lead_introduction']);
  await ok(call('/api/admin/partners/review','POST',{owner,expected_status:'submitted',status:'approved',approved_models:['full_sales','bt38_warm_lead'],confirmed:true,explanation:'Synthetic fixture approval for two independent models.'}));

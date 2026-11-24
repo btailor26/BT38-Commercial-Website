@@ -15,7 +15,7 @@ export async function applicationsApi(req,env,url,h){const user=req.headers.get(
  try{
  if(url.pathname==='/api/portal/partner/application'&&req.method==='POST')return saveApplication(req,env,h,user);
  if(url.pathname==='/api/portal/partner/accept-terms'&&req.method==='POST'){
-  if((await partnerAccess(env.BUCKET,user)).application?.agreements_managed)return h.json({error:'Open Agreements and accept each issued document separately.'},409);
+  if((await partnerAccess(env.BUCKET,user)).application?.agreements_managed||!(await partnerAccess(env.BUCKET,user)).application?.terms_acceptance)return h.json({error:'Open Agreements and accept each issued document separately.'},409);
   const access=await partnerAccess(env.BUCKET,user),d=await h.body(req);if(!['awaiting_terms_acceptance','approved'].includes(access.application?.status)||!access.model||!access.terms?.enabled)return h.json({error:'An approved application and published terms are required.'},409);
   if(d.accepted!==true||d.version!==access.terms.version||!access.terms.eligible_basis||!access.terms.models)return h.json({error:'Review the current calculation basis, payment conditions and assigned model.'},409);
   const key=await appKey(user),now=new Date().toISOString(),application={...access.application,status:'approved',approved_at:now,terms_acceptance:{version:d.version,model:access.application.approved_model,commission_bps:access.model.bps,accepted_at:now,accepted_by:user},updated_at:now};
