@@ -1,3 +1,4 @@
+import {issueAcceptFixture} from './agreement-fixtures.mjs';
 import {applicationInput,configuredTerms} from './partner-fixtures.mjs';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -31,10 +32,10 @@ try{
  assert.equal((await call('/api/admin/partners/review','POST',decision,admin)).status,200);
  assert.equal((await call('/api/portal/referrals','POST',lead(),alice)).status,403);
  assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:'stale'},alice)).status,409);
- assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:published.version},alice)).status,200);
+ await issueAcceptFixture({worker,env,origin,admin,partner:alice,owner:'google:alice'});
  assert.equal((await call('/api/portal/partner/profile','POST',{...profile,name:'Bob'},bob)).status,200);
  assert.equal((await call('/api/admin/partners/review','POST',{...decision,owner:'google:bob'},admin)).status,200);
- assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:published.version},bob)).status,200);
+ await issueAcceptFixture({worker,env,origin,admin,partner:bob,owner:'google:bob'});
  assert.equal((await call('/api/portal/referrals','POST',{...lead(),authorised:false},alice)).status,400);
  snapshot=await get('/api/portal/partner');assert.ok(snapshot.link);
  let result;

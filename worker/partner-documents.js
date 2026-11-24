@@ -8,7 +8,7 @@ const types={pdf:'application/pdf',doc:'application/msword',docx:'application/vn
 const purposes=['CV / résumé','Company profile','Business proposal','Portfolio','Case study','Supporting document'];
 export const uploadLimits=env=>({bytes:Math.min(20*1024*1024,Math.max(1024,Number(env.PARTNER_UPLOAD_MAX_BYTES)||10*1024*1024)),count:Math.min(10,Math.max(1,Number(env.PARTNER_UPLOAD_MAX_FILES)||5))});
 function fail(message,status=400){const e=Error(message);e.status=status;throw e;}
-const nameOf=name=>String(name||'').normalize('NFKC').replace(/[\u0000-\u001f\u007f/\\<>:"|?*\u202a-\u202e\u2066-\u2069]/g,'_').slice(0,160);
+export const nameOf=name=>String(name||'').normalize('NFKC').replace(/[\u0000-\u001f\u007f/\\<>:"|?*\u202a-\u202e\u2066-\u2069]/g,'_').slice(0,160);
 const bytesEqual=(a,b)=>b.every((v,i)=>a[i]===v);
 export function validateDocument(filename,bytes){const ext=filename.split('.').pop().toLowerCase();if(!types[ext]||!bytes.length||bytesEqual(bytes,[77,90])||bytesEqual(bytes,[127,69,76,70]))fail('Unsupported, empty or executable file.');const decoder=new TextDecoder('latin1'),text=decoder.decode(bytes);
  let requiresScan=['pdf','doc','docx','rtf'].includes(ext);
@@ -25,7 +25,7 @@ export function validateDocument(filename,bytes){const ext=filename.split('.').p
  }else if(ext==='jpg'||ext==='jpeg'){if(!bytesEqual(bytes,[255,216,255])||bytes[bytes.length-2]!==255||bytes[bytes.length-1]!==217)fail('Invalid JPEG or appended content.');let offset=2,dimensions=false;while(offset+4<bytes.length){if(bytes[offset++]!==255)break;let marker=bytes[offset++];while(marker===255)marker=bytes[offset++];if(marker===218)break;const size=bytes[offset]*256+bytes[offset+1];if(size<2||offset+size>bytes.length)fail('Invalid JPEG structure.');if([192,193,194].includes(marker)){const height=bytes[offset+3]*256+bytes[offset+4],width=bytes[offset+5]*256+bytes[offset+6];if(!width||!height||width*height>25000000)fail('JPEG dimensions exceed the permitted limit.');dimensions=true;}offset+=size;}if(!dimensions)fail('JPEG has no valid image dimensions.');}
  return {mime:types[ext],extension:ext,requiresScan};
 }
-async function scanBytes(bytes,env){if(!env.UPLOAD_SCAN_URL)return {status:'not_configured'};const url=new URL(env.UPLOAD_SCAN_URL);if(url.protocol!=='https:')fail('The malware scanning service is not safely configured.',503);try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/octet-stream',...(env.UPLOAD_SCAN_TOKEN?{Authorization:'Bearer '+env.UPLOAD_SCAN_TOKEN}:{})},body:bytes,signal:AbortSignal.timeout(25000),redirect:'error'});if(!r.ok)throw Error();const d=await r.json();if(!['clean','infected'].includes(d.status))throw Error();return {status:d.status,engine:typeof d.engine==='string'?d.engine.slice(0,100):'Configured scanner',at:new Date().toISOString()};}catch{return {status:'unavailable',at:new Date().toISOString()};}}
+export async function scanBytes(bytes,env){if(!env.UPLOAD_SCAN_URL)return {status:'not_configured'};const url=new URL(env.UPLOAD_SCAN_URL);if(url.protocol!=='https:')fail('The malware scanning service is not safely configured.',503);try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/octet-stream',...(env.UPLOAD_SCAN_TOKEN?{Authorization:'Bearer '+env.UPLOAD_SCAN_TOKEN}:{})},body:bytes,signal:AbortSignal.timeout(25000),redirect:'error'});if(!r.ok)throw Error();const d=await r.json();if(!['clean','infected'].includes(d.status))throw Error();return {status:d.status,engine:typeof d.engine==='string'?d.engine.slice(0,100):'Configured scanner',at:new Date().toISOString()};}catch{return {status:'unavailable',at:new Date().toISOString()};}}
 const prefix=async user=>'referrals/documents/'+await hash(user)+'/';
 const publicDoc=d=>({id:d.id,name:d.name,size:d.size,mime:d.mime,purpose:d.purpose,created_at:d.created_at,expires_at:d.expires_at,scan_status:d.scan.status,state:d.state,version:d.version});
 async function listOwner(store,user){return scan(store,await prefix(user));}
@@ -55,4 +55,4 @@ export async function documentsApi(req,env,url,h){const user=req.headers.get('oa
  return h.json({error:'Not found.'},404);
  }catch(e){return h.json({error:e.status?e.message:'The document request could not be completed safely.'},e.status||400);}
 }
-const hashBytes=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+export const hashBytes=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');

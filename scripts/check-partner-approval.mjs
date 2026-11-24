@@ -1,3 +1,4 @@
+import {issueAcceptFixture} from './agreement-fixtures.mjs';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -35,12 +36,12 @@ try{
  assert.equal((await call('/api/admin/referral-settings','POST',{...configuredTerms,eligible_basis:{}},admin)).status,400);
  r=await call('/api/admin/referral-settings','POST',{...configuredTerms,contact:origin+'/contact'},admin);assert.equal(r.status,200);const terms=await r.json();
  assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:'stale'})).status,409);
- assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:terms.version})).status,200);snapshot=await json('/api/portal/partner');assert.equal(snapshot.access.commission_bps,500);assert.equal(snapshot.access.active,true);assert.ok((await json('/api/portal/partner/training')).items.length>=8);
+ const firstAgreement=await issueAcceptFixture({worker,env,origin,admin,partner:alice,owner:'google:alice'});snapshot=await json('/api/portal/partner');assert.equal(snapshot.access.commission_bps,500);assert.equal(snapshot.access.active,true);assert.ok((await json('/api/portal/partner/training')).items.length>=8);
  r=await call('/api/portal/referrals','POST',{...intro(),commission_bps:1500});assert.equal(r.status,201);const first=(await r.json()).referral;assert.equal(first.commission_bps,500);assert.equal(first.commission_model,'lead_introduction');
- assert.equal((await call('/api/admin/partners/review','POST',review('approved','approved','full_sales'),admin)).status,200);assert.equal((await call('/api/portal/referrals','POST',intro())).status,403);
- assert.equal((await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:terms.version})).status,200);
- r=await call('/api/portal/referrals','POST',intro());assert.equal(r.status,201);assert.equal((await r.json()).referral.commission_bps,1000);snapshot=await json('/api/portal/partner');assert.equal(snapshot.referrals.find(x=>x.id===first.id).commission_bps,500);
- assert.equal((await call('/api/admin/partners/review','POST',review('suspended','approved','full_sales'),admin)).status,200);assert.equal((await json('/api/portal/partner')).referrals.length,0);assert.equal((await call('/api/referral/account')).status,403);assert.equal((await call('/api/portal/partner/training')).status,403);
+ assert.equal((await call('/api/admin/partners/review','POST',review('approved','approved','full_sales'),admin)).status,200);assert.equal((await call('/api/portal/referrals','POST',{...intro(),agreement_id:'unissued'})).status,403);
+ const salesAgreement=await issueAcceptFixture({worker,env,origin,admin,partner:alice,owner:'google:alice',model:'full_sales'});
+ r=await call('/api/portal/referrals','POST',{...intro(),agreement_id:salesAgreement.id});assert.equal(r.status,201);assert.equal((await r.json()).referral.commission_bps,1000);snapshot=await json('/api/portal/partner');assert.equal(snapshot.referrals.find(x=>x.id===first.id).commission_bps,500);
+ assert.equal((await call('/api/admin/partners/review','POST',review('suspended','approved','full_sales'),admin)).status,200);assert.ok((await json('/api/portal/partner')).referrals.length>=2);assert.equal((await call('/api/referral/account')).status,403);assert.equal((await call('/api/portal/partner/training')).status,403);
  const before=await env.BUCKET.get('referrals/profiles/'+await hash('google:alice')+'.json');assert.equal((await before.json()).custom_saved,'retained');
  // Applicants can manage private supporting files even when active partner access is unavailable.
  r=await upload('profile.txt',strToU8('Professional profile for local verification.'));assert.equal(r.status,201,await r.clone().text());const textDoc=(await r.json()).document;assert.equal(textDoc.state,'ready');assert.equal(textDoc.scan_status,'not_configured');

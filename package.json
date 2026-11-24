@@ -8,7 +8,8 @@
     "dev": "npm run build && node --env-file-if-exists=.env runtime/server.js",
     "start": "node --env-file-if-exists=.env runtime/server.js",
     "test": "node scripts/test.mjs",
-    "build:sites": "bash scripts/build.sh"
+    "build:sites": "bash scripts/build.sh",
+    "test:ui": "node scripts/check-partner-ui.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
@@ -20,7 +21,8 @@
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "playwright": "1.65.1"
   },
   "engines": {
     "node": ">=22.12"

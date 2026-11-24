@@ -15,3 +15,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run validate
+      - name: Install isolated UI test browser
+        run: npx playwright install --with-deps chromium
+      - name: Verify partner administration and acceptance on desktop and mobile
+        run: npm run test:ui
