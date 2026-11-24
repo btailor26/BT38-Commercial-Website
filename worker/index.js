@@ -147,7 +147,7 @@ async function referralApi(req,env,url){
   if(!s.enabled)return json({error:'Registration opens when commission terms are published.'},409);
   const access=await partnerAccess(env.BUCKET,uid);if(!access.active)return json({error:access.reason},403);if(d.accepted!==true||d.version!==s.version||typeof d.name!=='string'||!d.name.trim()||d.name.length>200)return json({error:'Read and accept the current terms and enter your name.'},400);
   const code='BT38-'+(await digest(uid)).slice(0,20).toUpperCase(),key='referrals/partners/'+code+'.json';const existing=await env.BUCKET.get(key);if(existing)return json({link:url.origin+'/r/'+code,code});
-  const partner={code,owner:uid,email,name:d.name.trim(),status:'active',terms:modelTerms(s,access.application.approved_model),accepted_at:new Date().toISOString()};
+  const partner={code,owner:uid,email,name:d.name.trim(),status:'active',terms:access.terms,accepted_at:access.agreement.acceptance.accepted_at};
   await env.BUCKET.put(key,JSON.stringify(partner),{onlyIf:{etagDoesNotMatch:'*'}});return json({link:url.origin+'/r/'+code,code});
  }
  return json({error:'Not found.'},404);
