@@ -10,7 +10,7 @@ async function sign(env,origin,claims,purpose,seconds){return new SignJWT({...cl
 async function verifyLocal(env,origin,token,purpose){const {payload}=await jwtVerify(token,secret(env),{algorithms:['HS256'],issuer:'bt38-website',audience:origin});if(payload.purpose!==purpose)throw Error('Invalid session.');return payload;}
 export async function googleIdentity(req,env,url){if(!configured(env))return null;try{const p=await verifyLocal(env,url.origin,cookies(req)[sessionCookie]||'','session');if(typeof p.sub!=='string'||typeof p.email!=='string')return null;return {id:'google:'+p.sub,email:p.email,name:p.name||''};}catch{return null;}}
 export async function googleAuthApi(req,env,url,{json,body},keys=googleKeys){const path=url.pathname;
-if(path==='/api/auth/me'&&req.method==='GET')return json({user:await googleIdentity(req,env,url)});
+if(path==='/api/auth/me'&&req.method==='GET'){const user=await googleIdentity(req,env,url),token=cookies(req)[sessionCookie]||'';const session_key=user?[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))].map(b=>b.toString(16).padStart(2,'0')).join(''):null;return json({user,session_key});}
 if(req.method!=='POST'||req.headers.get('origin')!==url.origin)return json({error:'Invalid sign-in request.'},403);
 if(path==='/api/auth/logout'){const response=json({ok:true});response.headers.append('Set-Cookie',cookie(sessionCookie,'',0));response.headers.append('Set-Cookie',cookie(nonceCookie,'',0));return response;}
 if(!configured(env))return json({error:'Google sign-in is awaiting configuration. Please contact BT38.'},503);

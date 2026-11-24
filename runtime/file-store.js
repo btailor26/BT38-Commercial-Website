@@ -10,5 +10,5 @@ export class FileStore {
  put(key,value,options){return this.mutate(()=>{if(options?.onlyIf?.etagDoesNotMatch==='*'&&Object.hasOwn(this.data,key))return null;if(options?.onlyIf?.etagMatches!==undefined&&(this.data[key]===undefined||this.hash(this.data[key])!==options.onlyIf.etagMatches))return null;this.data[key]=value;return {key};});}
  batch(writes,events){return this.mutate(()=>{if(writes.some(w=>w.etag==null?this.data[w.key]!==undefined:this.data[w.key]===undefined||this.hash(this.data[w.key])!==w.etag))return false;for(const w of writes)this.data[w.key]=w.body;for(const e of events)this.data[e.key]=e.body;return true;});}
  delete(key){return this.mutate(()=>{delete this.data[key]});}
- async list({prefix='',cursor='',limit=1000}={}){await this.ready;await this.queue;const keys=Object.keys(this.data).filter(k=>k.startsWith(prefix)&&k>cursor).sort();const page=keys.slice(0,limit),truncated=keys.length>limit;return {objects:page.map(key=>({key})),truncated,...(truncated?{cursor:page.at(-1)}:{})};}
+ async list({prefix='',cursor='',startAfter='',limit=1000}={}){await this.ready;await this.queue;const keys=Object.keys(this.data).filter(k=>k.startsWith(prefix)&&k>(cursor||startAfter)).sort();const page=keys.slice(0,limit),truncated=keys.length>limit;return {objects:page.map(key=>({key})),truncated,...(truncated?{cursor:page.at(-1)}:{})};}
 }
