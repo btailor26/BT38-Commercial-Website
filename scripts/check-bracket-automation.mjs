@@ -19,6 +19,18 @@ try{
  const warm=permissions.agreements.find(g=>g.model==='bt38_warm_lead');await ok(call('/api/admin/partners/agreements/'+warm.id+'?owner='+encodeURIComponent(owner),'PATCH',{status:'suspended',confirmed:true,explanation:'Synthetic independent bracket suspension.'}));permissions=await ok(call('/api/portal/partner/permissions','GET',undefined,alice));assert.deepEqual(permissions.access.models.sort(),['full_sales','lead_introduction']);
  const repeat=await ok(call('/api/admin/partners/review','POST',{...review,expected_status:'approved'}));assert.equal(repeat.issued_agreements.length,0);
  const second=await ok(call('/api/admin/partners/review','POST',{...review,expected_status:'approved',approved_models:['full_sales','lead_introduction']}));assert.equal(second.issued_agreements.length,0);assert.equal((await ok(call('/api/portal/partner/agreements','GET',undefined,alice))).agreements.length,3);
+ // Existing approved partner receives a missing agreement when configuration is enabled later.
+ const lead=configs.lead_introduction;
+ await ok(call('/api/admin/partners/agreement-templates/'+lead.id,'PATCH',{automatic_issuing:false,confirmed:true,explanation:'Synthetic temporary disable.'}));
+ await ok(call('/api/portal/partner/application','POST',applicationInput(),bob));
+ const bobReview=await ok(call('/api/admin/partners/review','POST',{...review,owner:'google:bob',approved_models:['lead_introduction']}));
+ assert.equal(bobReview.issued_agreements.length,0);
+ const enabled=await ok(call('/api/admin/partners/agreement-templates/'+lead.id,'PATCH',lead.config));
+ assert.equal(enabled.issued.length,1);assert.equal(enabled.pending.length,0);
+ const bobPermissions=await ok(call('/api/portal/partner/permissions','GET',undefined,bob));
+ assert.equal(bobPermissions.agreements.length,1);assert.equal(bobPermissions.access.active,false);
+ assert.equal(bobPermissions.agreements[0].status,'issued');
+ assert.equal((await ok(call('/api/admin/partners/agreement-templates/'+lead.id,'PATCH',lead.config))).issued.length,0);
  let lists=0;const list=store.list.bind(store);store.list=async d=>{lists++;return list(d);};const event={id:crypto.randomUUID(),kind:'agreement',key:'referrals/agreements/'+await hash(owner)+'/'+warm.id+'.json',audience:[owner],date:new Date().toISOString()};const projected=await projectEvent(event,store,{user:owner,admin:false,view:'partner'});assert.equal(projected.agreement.status,'suspended');assert.equal(projected.permissions.access.models.length,2);assert.equal(lists,0);assert.equal(await projectEvent(event,store,{user:'google:bob',admin:false,view:'partner'}),null);store.list=list;
  const allBefore=await scan(store,'referrals/events/');await eventStore(store).atomicUpdate([{key:'referrals/agreement-defaults/test.json',body:'{}',etag:null}]);assert.equal((await scan(store,'referrals/events/')).length,allBefore.length,'Configuration must not emit a fake referral event.');
  // Neon owner lookup is parameterised and never fetches unrelated body rows. Replay uses a key lower bound.
