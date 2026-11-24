@@ -1,6 +1,13 @@
 // Explicit local fixtures; never imported by production code.
-import {appKey} from '../worker/partner-policy.js';
+import {appKey,hash} from '../worker/partner-policy.js';
 export const calculationBasis={calculation:'Agreed eligible net project value, capped by the authorised scope.',vat:'VAT is excluded from the eligible commission calculation.',refunds:'Verified refunds and cancellations reduce or reverse eligible commission.',third_party_costs:'Third-party subscriptions and pass-through costs are excluded.',partial_payments:'Partial eligible receipts accrue proportionally; no unpaid value earns commission.'};
 export const configuredTerms={models:{lead_introduction:500,full_sales:1000},eligible_basis:calculationBasis,commission_bps:500,hold_days:0,payout_days:15,operator:'Local fixture operator',contact:'https://site.example.invalid/contact',scope:'Eligible software project value under the agreed net calculation basis.',enabled:true,confirmed:true};
 export const applicationInput=extra=>({name:'Alice',company:'Example partner',phone:'',country:'GB',website:'',specialism:'B2B software introductions',network:'Established business network',fit:'Introduce suitable software customers.',value:'Qualify genuine business requirements.',experience:'Relevant B2B introductions and industry experience.',business_model:'Professional project introductions through an existing network.',pipeline:'yes',pipeline_details:'Existing B2B customers',preferred_model:'lead_introduction',categories:['Business development consultant'],other_category:'',accepted:true,...extra});
-export async function approveFixture(store,user,terms,model='lead_introduction'){await store.put(await appKey(user),JSON.stringify({owner:user,email:user.includes(':')?'fixture@gmail.com':user+'@example.invalid',name:'Local approved fixture',status:'approved',approved_model:model,terms_acceptance:{version:terms.version,model,commission_bps:model==='full_sales'?1000:500},history:[]}));}
+// Seed an already accepted synthetic agreement for downstream workflow tests.
+// Actual issue/acceptance endpoints are exercised separately in check-agreements.mjs.
+export async function approveFixture(store,user,terms,model='lead_introduction'){
+ const id=crypto.randomUUID(),document_hash=await hash('Synthetic local fixture '+id),commission_bps=terms.models?.[model]??(model==='full_sales'?1000:500),now=new Date().toISOString();
+ const agreement={id,reference:'TEST-'+id,owner:user,model,status:'accepted',document_hash,document_version:'local-fixture',commission_bps,conditions:{...terms},acceptance:{accepted_by:user,document_hash,model,commission_bps,accepted_at:now}};
+ await store.put('referrals/agreements/'+await hash(user)+'/'+id+'.json',JSON.stringify(agreement));
+ await store.put(await appKey(user),JSON.stringify({owner:user,email:user.includes(':')?'fixture@gmail.com':user+'@example.invalid',name:'Local approved fixture',status:'approved',approved_model:model,approved_models:[model],agreements_managed:true,agreement_ids:[id],terms_acceptance:null,history:[]}));
+}
