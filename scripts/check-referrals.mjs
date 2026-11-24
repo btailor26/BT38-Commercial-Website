@@ -35,7 +35,7 @@ assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,net_pe
 let account=await read('/api/referral/account','alice');assert.equal(account.entries.length,1);assert.equal((await read('/api/referral/account','bob')).entries.length,0);
 assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,payment_reference:'refund-1',original_reference:'receipt-1',type:'refund',net_pence:-10000},'owner')).status,200);
 assert.equal((await call('/api/admin/referral-receipt','POST',{...receipt,payment_reference:'refund-2',original_reference:'receipt-1',type:'refund',net_pence:-49900},'owner')).status,400);
-const changedTerms=await (await call('/api/admin/referral-settings','POST',{...config,commission_bps:500},'owner')).json();const acceptance=await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:changedTerms.version},'alice');assert.equal(acceptance.status,200,await acceptance.clone().text());
+const changedTerms=await (await call('/api/admin/referral-settings','POST',{...config,commission_bps:500},'owner')).json();const acceptance=await call('/api/portal/partner/accept-terms','POST',{accepted:true,version:changedTerms.version},'alice');assert.equal(acceptance.status,409,await acceptance.clone().text());
 assert.equal((await read('/api/referral/account','alice')).partner.terms.commission_bps,1000);
 assert.equal((await call('/api/admin/referral-paid','POST',{id:payment.id,payout_reference:'bank-transfer-1'},'owner')).status,409);
 assert.equal((await read('/api/referral/account','alice')).entries.find(x=>x.id===payment.id).status,'recorded');
