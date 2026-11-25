@@ -1,7 +1,7 @@
 import {agreementView,templateView} from './partner-agreements.js';
 import {messageProjection} from './messaging.js';
 import {salesView} from './sales-api.js';
-import {partnerAccess,MODELS,applicationView,modelTerms,salesModels,hash} from './partner-policy.js';
+import {partnerAccess,MODELS,applicationView,modelTerms,salesModels,hash,allowsPermission} from './partner-policy.js';
 import {saveApplication} from './partner-applications.js';
 import {TRAINING} from './portal-ui.js';
 import {scan,eventStream} from './commercial-events.js';
@@ -40,7 +40,7 @@ export async function projectEvent(event,store,{user,admin,view}){if(['message',
  const r=await read(store,'records/enquiry/'+obj.enquiry_id+'.json');if(!admin&&(view==='customer'||r?.referral?.owner!==user))return null;return {event_id:event.id,kind:'commission',entry:admin?obj:ledgerView(obj)};}
 function audit(r,stage,explanation,user,source='admin',extra={}){const event={id:crypto.randomUUID(),reference:r.reference,previous_status:state(r),new_status:stage,timestamp:new Date().toISOString(),actor:source==='partner'?'Referring partner':'BT38 administration',actor_id:user,source,explanation};r.timeline=[...timeline(r),event];r.progress={...r.progress,stage,next_action:nextAction(stage),...extra};r.updated=event.timestamp;return r;}
 async function update(store,key,old,r){const opts=old.etag?{onlyIf:{etagMatches:old.etag}}:undefined;const result=await store.put(key,JSON.stringify(r),opts);if(result===null){const error=Error('This record changed. Refresh before trying again.');error.status=409;throw error;}}
-export async function commercialApi(req,env,url,h){const user=uid(req),adminPath=url.pathname.startsWith('/api/admin/'),admin=user&&h.ADMIN(req,env),path=url.pathname;
+export async function commercialApi(req,env,url,h,options={}){const user=uid(req),adminPath=url.pathname.startsWith('/api/admin/'),admin=user&&h.ADMIN(req,env),path=url.pathname;
  if(!user||!email(req))return h.json({error:'Sign in with Google to continue.',signin:true},401);if(adminPath&&!admin)return h.json({error:'Administrator access required.'},403);if(!env.BUCKET)return h.json({error:'Website storage unavailable.'},503);if(req.method!=='GET'&&req.headers.get('origin')!==url.origin)return h.json({error:'Invalid origin.'},403);
  try{
  if(path==='/api/portal/partner/permissions'&&req.method==='GET')return h.json(await permissionSnapshot(env.BUCKET,user,url.origin));
@@ -55,7 +55,7 @@ export async function commercialApi(req,env,url,h){const user=uid(req),adminPath
  if(path==='/api/portal/customer'&&req.method==='GET'){
   const cursor=new Date().toISOString()+'|';const referrals=await matching(env.BUCKET,'records/enquiry/','customer_owner',user);return h.json({referrals:referrals.map(customerView),cursor});
  }
- if(path==='/api/portal/referrals'&&req.method==='POST'){const input=await h.body(req);const access=await partnerAccess(env.BUCKET,user,{agreement_id:input.agreement_id,model:input.commercial_model,own:true});if(!access.active)return h.json({error:access.reason},403);if(access.modelId==='bt38_warm_lead')return h.json({error:'BT38-assigned warm-lead partners cannot submit or claim their own referrals. BT38 administration must assign an existing lead.'},403);
+ if(path==='/api/portal/referrals'&&req.method==='POST'){const input=await h.body(req);const access=await partnerAccess(env.BUCKET,user,{agreement_id:input.agreement_id,model:input.commercial_model,own:true});if(!access.active)return h.json({error:access.reason},403);if(!allowsPermission(access,options.imported?'excel_import':'manual_entry'))return h.json({error:'This entry method is not authorised.'},403);if(access.modelId==='bt38_warm_lead')return h.json({error:'BT38-assigned warm-lead partners cannot submit or claim their own referrals. BT38 administration must assign an existing lead.'},403);
   const profile=await read(env.BUCKET,'referrals/profiles/'+await h.digest(user)+'.json');if(!profile?.application_terms)return h.json({error:'Open My Profile and save your experience and applicable terms acknowledgement first.'},409);
   const d=input;if(!validId(d.id)||d.authorised!==true)return h.json({error:'Confirm you are authorised to share the customer’s details.'},400);
   const fields=['company','name','email','phone','country','website','service','requirements','description','additional_notes'];let clean={};for(const k of fields){if(typeof d[k]!=='string'||d[k].length>6000)return h.json({error:'Check the referral fields.'},400);clean[k]=d[k].trim();}if(['company','name','email','country','service','requirements','description'].some(k=>!clean[k])||!/^\S+@\S+\.\S+$/.test(clean.email))return h.json({error:'Complete the required customer details and a valid business email.'},400);
@@ -93,7 +93,7 @@ export async function commercialApi(req,env,url,h){const user=uid(req),adminPath
   if(r.referral||r.lead_source==='Partner direct referral'||r.authorised_share)return h.json({error:'This lead already has partner attribution; it cannot be reassigned or stacked.'},409);
   if(r.conflict&&!r.conflict.resolved)return h.json({error:'Resolve the lead ownership conflict before assignment.'},409);
   if(d.expected_stage!==state(r)||!['submitted','under_review','qualified','contacted'].includes(state(r)))return h.json({error:'Refresh the lead and assign before commercial negotiations progress.'},409);
-  const access=await partnerAccess(env.BUCKET,d.partner_owner,{model:'bt38_warm_lead',agreement_id:d.agreement_id});if(!access.active)return h.json({error:'Partner must be active and have accepted published 5% BT38 warm-lead terms.'},409);
+  const access=await partnerAccess(env.BUCKET,d.partner_owner,{model:'bt38_warm_lead',agreement_id:d.agreement_id});if(!access.active||!allowsPermission(access,'assigned_leads'))return h.json({error:'Partner must be active and have accepted published 5% BT38 warm-lead terms.'},409);
   const code=await codeFor(d.partner_owner,h),partner=await read(env.BUCKET,'referrals/partners/'+code+'.json');if(partner?.status!=='active')return h.json({error:'Active partner record is required.'},409);
   const now=new Date().toISOString();r.lead_source='BT38 supplied warm lead';r.referral={owner:d.partner_owner,code,...snapshotTerms(modelTerms(access.terms,'bt38_warm_lead')),assigned_by:user,assigned_at:now,agent_name:access.application.name||partner.name||'Assigned sales partner',lead_origin:'BT38'};r.assigned=d.partner_owner;
   audit(r,state(r),d.explanation.trim(),user,'admin');await update(env.BUCKET,key,old,r);return h.json({referral:r});

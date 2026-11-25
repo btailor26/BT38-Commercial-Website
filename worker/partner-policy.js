@@ -24,3 +24,6 @@ export async function partnerAccess(store,user,selection={}){
 }
 export const modelTerms=(terms,model)=>({...terms,commission_bps:terms?.models?.[model]??(terms?.commission_model===model?terms.commission_bps:MODELS[model].bps),commission_model:model});
 export function applicationView(application){if(!application)return null;const {internal_notes,original_application,admin_history,approved_by,...visible}=application;return {...visible,history:(visible.history||[]).map(({actor,...e})=>({...e,actor:e.source==='admin'?'BT38 administration':'Applicant'}))};}
+
+export const PERMISSION_KEYS=['manual_entry','excel_import','assigned_leads','call_outcomes','callbacks'];
+export const allowsPermission=(access,key)=>!Array.isArray(access?.application?.permissions)||access.application.permissions.includes(key);
