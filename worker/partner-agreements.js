@@ -21,8 +21,8 @@ export async function prepareApprovedAgreements(store,a,actor){
  for(const model of a.approved_models||[a.approved_model]){
   if(existing.some(g=>g.model===model&&['issued','accepted','suspended'].includes(g.status)))continue;
   const config=await jsonRecord(store,defaultAgreementKey(model));
-  if(!config&&STANDARD_AGREEMENTS[model]){
-   const standard=STANDARD_AGREEMENTS[model],bytes=new TextEncoder().encode(standard.text),digest=await hashBytes(bytes),id=crypto.randomUUID(),now=new Date().toISOString();
+  if(config?.enabled&&config.standard_text===true&&STANDARD_AGREEMENTS[model]){
+   const standard=config.standard,bytes=new TextEncoder().encode(standard.text),digest=await hashBytes(bytes),id=crypto.randomUUID(),now=new Date().toISOString();
    const record={id,reference:'BT38-A-'+id.replaceAll('-','').toUpperCase(),owner:a.owner,partner_reference:'BT38-'+(await hash(a.owner)).slice(0,20).toUpperCase(),model,commission_bps:standard.commission_bps,template_id:null,document_version:standard.version,document:{name:MODELS[model].label+' Terms of Business',mime:'text/plain',size:bytes.length,sha256:digest,text:standard.text},document_hash:digest,conditions:{settings_version:standard.version},variation:null,status:'issued',issued_at:now,issued_by:actor,acceptance:null,history:[{action:'issued',at:now,actor,source:'approved_standard_bracket'}],declaration,automatic:true};
    writes.push(serial(await agreementKey(a.owner,id),record));issued.push(record);continue;
   }
@@ -46,6 +46,10 @@ async function uploadTemplate(req,env,url,user){const store=env.BUCKET,objects=p
 }
 export async function agreementsApi(req,env,url,h){const user=req.headers.get('oai-authenticated-user-id'),email=req.headers.get('oai-authenticated-user-email'),adminPath=url.pathname.startsWith('/api/admin/'),admin=!!user&&h.ADMIN(req,env),store=env.BUCKET,path=url.pathname;if(!user||!email)return h.json({error:'Sign in with Google.'},401);if(adminPath&&!admin)return h.json({error:'Administrator access required.'},403);if(req.method!=='GET'&&req.headers.get('origin')!==url.origin)return h.json({error:'Invalid origin.'},403);
  try{
+ if(path==='/api/admin/partners/standard-agreements'){
+  if(req.method==='GET')return h.json({standards:await Promise.all(Object.keys(MODELS).map(async model=>({model,proposed:STANDARD_AGREEMENTS[model],configuration:await jsonRecord(store,defaultAgreementKey(model))})))});
+  if(req.method==='POST'){const d=await h.body(req);if(!MODELS[d.model]||d.confirmed!==true||typeof d.text!=='string'||!d.text.trim()||d.text.length>30000||typeof d.version!=='string'||!d.version.trim()||d.version.length>100||d.commission_bps!==MODELS[d.model].bps)fail('Confirm the independent agreement wording, version and bracket rate.');const key=defaultAgreementKey(d.model),prior=await store.get(key),versionKey='referrals/standard-agreement-versions/'+d.model+'/'+await hash(d.version)+'.json';const standard={text:d.text,version:d.version,commission_bps:d.commission_bps};const config={id:crypto.randomUUID(),model:d.model,enabled:true,standard_text:true,standard,updated_by:user,updated_at:new Date().toISOString()};await commit(store,[serial(versionKey,{...standard,model:d.model,approved_by:user,approved_at:config.updated_at}),serial(key,config,prior?.etag??null)]);return h.json({configuration:config},201);}
+ }
  if(path==='/api/admin/partners/agreement-templates'){
   if(req.method==='GET')return h.json({templates:(await scan(store,'referrals/agreement-templates/')).map(templateView),models:MODELS,storage_configured:!!privateObjects(env),scanner_configured:!!env.UPLOAD_SCAN_URL,automatic_issuing:(await Promise.all(Object.keys(MODELS).map(m=>jsonRecord(store,defaultAgreementKey(m))))).filter(Boolean)});
   if(req.method==='POST')return h.json({template:templateView(await uploadTemplate(req,env,url,user))},201);
@@ -67,6 +71,7 @@ export async function agreementsApi(req,env,url,h){const user=req.headers.get('o
  if(path==='/api/portal/partner/agreements'&&req.method==='GET'){const a=await jsonRecord(store,await appKey(user));return h.json({agreements:(await Promise.all((a?.agreement_ids||[]).map(async id=>jsonRecord(store,await agreementKey(user,id))))).filter(Boolean).map(agreementView)});}
  if(path==='/api/admin/partners/agreements'&&req.method==='POST'){
   const d=await h.body(req);if(!uuid(d.id)||typeof d.owner!=='string'||!MODELS[d.model]||!uuid(d.template_id)||d.confirmed!==true)fail('Confirm the partner, commercial model and exact agreement version.');const {old,a}=await application(store,d.owner);if(!['approved','awaiting_terms_acceptance'].includes(a.status)||a.account_status==='suspended'||!(a.approved_models||[a.approved_model]).includes(d.model))fail('Approve this partner for the selected model first.',409);
+  const priorAgreements=await Promise.all((a.agreement_ids||[]).map(async id=>jsonRecord(store,await agreementKey(a.owner,id))));if(priorAgreements.some(g=>g?.model===d.model&&g.status==='issued'&&g.automatic&&typeof g.document?.text==='string'))fail('A standard agreement is already awaiting acceptance for this bracket.',409);
   const tOld=await store.get(templateKey(d.template_id)),t=tOld?await tOld.json():null;if(!t||t.model!==d.model||t.state!=='ready'||!t.active)fail('Select an active, clean document for this commercial model.',409);
   const settings=await jsonRecord(store,'referrals/settings.json');if(!settings?.enabled)fail('Publish complete Programme Settings before issuing.',409);
   if(d.settings_version!==settings.version)fail('Programme Settings changed. Review the latest conditions.',409);
