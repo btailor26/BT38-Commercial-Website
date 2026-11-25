@@ -114,6 +114,10 @@ jobs:
           for attempt in 1 2 3 4 5 6; do
             code="$(curl -L -sS -o /dev/null -w '%{http_code}' --max-time 20 https://www.bt38inv.com/ || true)"
             if [ "$code" = "200" ]; then
+              if grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"true"' fly.toml; then
+                curl --fail --silent --show-error --max-time 20 https://www.bt38inv.com/api/checkout/config | jq -e '.ready == true' >/dev/null
+                echo "COMMERCIAL_CHECKOUT_CONFIG_READY"
+              fi
               echo "COMMERCIAL_HTTP_OK commit=${{ github.sha }}"
               exit 0
             fi
