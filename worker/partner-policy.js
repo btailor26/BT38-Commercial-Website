@@ -22,7 +22,7 @@ export async function partnerAccess(store,user,selection={}){
  const modelId=selected?.model||(legacy?application.approved_model:null),model=modelId?{...MODELS[modelId],bps:selected?.commission_bps??terms.models?.[modelId]??MODELS[modelId].bps}:legacyModel;
  return {application,revision:record?.etag,terms:selected?agreementTerms(selected):terms,active:!!selected||!!legacy,model,modelId,agreement:selected||null,agreements,activeAgreements,reason:!application?'Application required':!permitted?'Application approval and active account required':selection.own&&activeAgreements.filter(a=>a.model!=='bt38_warm_lead').length>1?'Select the specific accepted agreement for this introduction':'A separately issued and explicitly accepted agreement is required'};
 }
-export const modelTerms=(terms,model)=>({...terms,commission_bps:terms?.models?.[model]??(terms?.commission_model===model?terms.commission_bps:MODELS[model].bps),commission_model:model});
+export const modelTerms=(terms,model)=>({...terms,commission_bps:(terms?.commission_model===model&&Number.isSafeInteger(terms.commission_bps)?terms.commission_bps:terms?.models?.[model]??MODELS[model].bps),commission_model:model});
 export function applicationView(application){if(!application)return null;const {internal_notes,original_application,admin_history,approved_by,...visible}=application;return {...visible,history:(visible.history||[]).map(({actor,...e})=>({...e,actor:e.source==='admin'?'BT38 administration':'Applicant'}))};}
 
 export const PERMISSION_KEYS=['manual_entry','excel_import','assigned_leads','call_outcomes','callbacks'];
