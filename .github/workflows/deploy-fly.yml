@@ -59,7 +59,7 @@ jobs:
           test -f package-lock.json
           grep -Eq '^app[[:space:]]*=[[:space:]]*"bt38-commercial-website"' fly.toml
           grep -Eq '^primary_region[[:space:]]*=[[:space:]]*"ams"' fly.toml
-          grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"false"' fly.toml
+          grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"(true|false)"' fly.toml
           grep -Eq 'PUBLIC_ORIGIN[[:space:]]*=[[:space:]]*"https://www.bt38inv.com"' fly.toml
       - run: npm ci
       - run: npm test
@@ -99,6 +99,12 @@ jobs:
           test -n "$FLY_API_TOKEN"
           # Build on this GitHub-hosted runner; Depot registry authentication failed.
           # No workstation build and no additional Fly builder app.
+          if grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"true"' fly.toml; then
+            SECRET_NAMES="$(flyctl secrets list --app bt38-commercial-website --json | jq -r '.[] | .Name // .name')"
+            for name in REVOLUT_PRODUCTION_API_SECRET_KEY REVOLUT_MERCHANT_API_VERSION REVOLUT_WEBHOOK_SIGNING_SECRET INVOICE_SELLER_NAME INVOICE_SELLER_ADDRESS INVOICE_CONTACT_EMAIL INVOICE_COMPANY_NUMBER BILLING_COUNTRY_TAX_JSON; do
+              grep -Fxq "$name" <<< "$SECRET_NAMES" || { echo "Missing checkout configuration: $name"; exit 1; }
+            done
+          fi
           docker info >/dev/null
           flyctl deploy --app bt38-commercial-website --config fly.toml --local-only --strategy rolling
       - name: Verify commercial website HTTP response
