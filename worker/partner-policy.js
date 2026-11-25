@@ -26,4 +26,5 @@ export const modelTerms=(terms,model)=>({...terms,commission_bps:(terms?.commiss
 export function applicationView(application){if(!application)return null;const {internal_notes,original_application,admin_history,approved_by,...visible}=application;return {...visible,history:(visible.history||[]).map(({actor,...e})=>({...e,actor:e.source==='admin'?'BT38 administration':'Applicant'}))};}
 
 export const PERMISSION_KEYS=['manual_entry','excel_import','assigned_leads','call_outcomes','callbacks'];
-export const allowsPermission=(access,key)=>!Array.isArray(access?.application?.permissions)||access.application.permissions.includes(key);
+export const BRACKET_PERMISSIONS={lead_introduction:['manual_entry','excel_import'],bt38_warm_lead:['assigned_leads','call_outcomes','callbacks','customer_communication','send_quotations'],full_sales:['manual_entry','excel_import','call_outcomes','callbacks','customer_communication','send_quotations']};
+export const allowsPermission=(access,key)=>{const a=access?.application,m=access?.modelId;if(!BRACKET_PERMISSIONS[m]?.includes(key))return false;const p=a?.permissions_by_model?.[m];return Array.isArray(p)?p.includes(key):!PERMISSION_KEYS.includes(key)||!Array.isArray(a?.permissions)||a.permissions.includes(key);};
