@@ -101,9 +101,17 @@ jobs:
           # No workstation build and no additional Fly builder app.
           if grep -Eq 'CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*"true"' fly.toml; then
             SECRET_NAMES="$(flyctl secrets list --app bt38-commercial-website --json | jq -r '.[] | .Name // .name')"
+            missing=0
             for name in REVOLUT_PRODUCTION_API_SECRET_KEY REVOLUT_MERCHANT_API_VERSION REVOLUT_WEBHOOK_SIGNING_SECRET INVOICE_SELLER_NAME INVOICE_SELLER_ADDRESS INVOICE_CONTACT_EMAIL INVOICE_COMPANY_NUMBER BILLING_COUNTRY_TAX_JSON; do
-              grep -Fxq "$name" <<< "$SECRET_NAMES" || { echo "Missing checkout configuration: $name"; exit 1; }
+              if ! grep -Fxq "$name" <<< "$SECRET_NAMES"; then
+                echo "::error title=Missing production billing setting::$name is not set on bt38-commercial-website"
+                missing=1
+              fi
             done
+            if [ "$missing" -ne 0 ]; then
+              echo "Billing configuration incomplete. Existing app unchanged; checkout must not be deployed enabled."
+              exit 1
+            fi
           fi
           docker info >/dev/null
           flyctl deploy --app bt38-commercial-website --config fly.toml --local-only --strategy rolling
