@@ -35,4 +35,18 @@ assert.equal((await call('/api/partner/profile','POST',applicationInput({name:'A
 d=await (await call('/api/partner/profile')).json();assert.equal(d.profile.company,'Referral partner');assert.equal(d.profile.iban,undefined);
 assert.equal((await (await call('/api/partner/profile','GET',null,'bob')).json()).profile,null);
 assert.equal((await (await call('/api/customer/billing')).json()).orders.length,0);
+const orderId=crypto.randomUUID(),ownerHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('alice'))),b=>b.toString(16).padStart(2,'0')).join('');
+const product={name:'Test system',detail:'Test purchase'};
+data.set('customers/orders/'+ownerHash+'/'+orderId+'.json',JSON.stringify({id:orderId}));
+data.set('checkout/orders/'+orderId+'.json',JSON.stringify({id:orderId,owner:'alice',product,amount:49900,created_at:new Date().toISOString()}));
+assert.equal((await (await call('/api/customer/billing')).json()).orders[0].status,'Awaiting payment');
+assert.equal((await call('/api/customer/invoices/'+orderId)).status,404);
+data.set('checkout/invoices/'+orderId+'.json',JSON.stringify({number:'TEST-1',date:'2026-11-25',seller:{name:'BT38',address:'Test',email:'test@example.invalid'},customer:{company:'Example company',name:'Alice'},product,net:49900,tax:0,tax_bps:0,amount:49900,tax_label:'Test',provider_id:'test'}));
+assert.equal((await (await call('/api/customer/billing')).json()).orders[0].status,'Paid');
+const download=await call('/api/customer/invoices/'+orderId);
+assert.equal(download.status,200);
+assert.match(download.headers.get('content-disposition'),/^attachment;/);
+assert.match(await download.text(),/TEST-1/);
+assert.equal((await call('/api/customer/invoices/'+orderId,'GET',null,'bob')).status,404);
+assert.equal((await call('/api/customer/invoices/'+orderId,'GET',null,null)).status,401);
 console.log('Passed: customer signup/profile ownership, onboarding persistence, billing isolation, support requests/replies, authorised admin replies, partner profile privacy and client syntax.');
