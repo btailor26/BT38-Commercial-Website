@@ -70,7 +70,7 @@ export default {async scheduled(_controller,env,ctx){if(!env.WEBSITE_DATABASE_UR
  const legacy=env.BUCKET;if(!env.PRIVATE_UPLOADS&&typeof legacy?.head==='function')env={...env,PRIVATE_UPLOADS:legacy};if(env.WEBSITE_DATABASE_URL)env={...env,BUCKET:new NeonRecordStore(env.WEBSITE_DATABASE_URL,legacy)};
  env={...env,BUCKET:eventStore(env.BUCKET)};
  if(url.pathname.startsWith('/api/sales'))return await salesApi(req,env,url,{json,body,digest,ADMIN});
- if(url.pathname.includes('/agreement-templates')||url.pathname.includes('/agreements'))return await agreementsApi(req,env,url,{json,body,digest,ADMIN});
+ if(url.pathname==='/api/admin/partners/standard-agreements'||url.pathname.includes('/agreement-templates')||url.pathname.includes('/agreements'))return await agreementsApi(req,env,url,{json,body,digest,ADMIN});
  if(url.pathname.includes('/documents')&&(url.pathname.startsWith('/api/portal/partner/')||url.pathname.startsWith('/api/admin/partners/')))return await documentsApi(req,env,url,{json,body,digest,ADMIN});
  if(url.pathname.startsWith('/api/portal/messages')||url.pathname.startsWith('/api/admin/messages'))return await messagingApi(req,env,url,{json,body,digest,ADMIN});
  if(['/api/portal/partner/application','/api/portal/partner/accept-terms'].includes(url.pathname)||url.pathname.startsWith('/api/admin/partners/'))return await applicationsApi(req,env,url,{json,body,digest,ADMIN});
