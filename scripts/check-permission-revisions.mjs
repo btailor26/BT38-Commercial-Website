@@ -24,7 +24,7 @@ try {
  const standard=STANDARD_AGREEMENTS.lead_introduction;
  await ok(call('/api/admin/partners/standard-agreements','POST',{model:'lead_introduction',text:standard.text,version:standard.version,commission_bps:500,confirmed:true}));
  const initial=await ok(call('/api/admin/partners/review','POST',{owner,expected_status:'submitted',status:'approved',approved_models:['lead_introduction'],permissions_by_model:{lead_introduction:['manual_entry']},confirmed:true,explanation:'Synthetic test approval of manual-entry only.'}));
- assert.equal(initial.issued?.length??initial.agreements_issued?.length??0,1,'First approval must issue the approved standard agreement');
+ assert.equal(initial.issued_agreements?.length??0,1,'First approval must issue the approved standard agreement');
  let portal=await ok(call('/api/portal/partner','GET',undefined,alice));
  assert.equal(portal.agreements.length,1);
  const original=portal.agreements[0];
