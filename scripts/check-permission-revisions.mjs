@@ -1,0 +1,62 @@
+// Isolated revision-permission regression: no production records or agreement edits.
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {SignJWT} from 'jose';
+import worker from '../runtime/worker.js';
+import {FileStore} from '../runtime/file-store.js';
+import {applicationInput} from './partner-fixtures.mjs';
+import {STANDARD_AGREEMENTS} from '../worker/standard-agreement-wording.js';
+import {hash,partnerAccess,allowsPermission} from '../worker/partner-policy.js';
+
+const dir=await mkdtemp(join(tmpdir(),'bt38-permission-revisions-'));
+const origin='https://permission-revision.example.invalid',owner='google:alice';
+const env={BUCKET:new FileStore(dir),ADMIN_EMAIL:'admin@gmail.com',GOOGLE_CLIENT_ID:'fixture.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:'permission-revision-test-key-'.repeat(4)};
+const session=async sub=>'__Host-bt38-google='+await new SignJWT({email:sub+'@gmail.com',purpose:'session'}).setProtectedHeader({alg:'HS256'}).setSubject(sub).setIssuer('bt38-website').setAudience(origin).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.GOOGLE_SESSION_SIGNING_KEY));
+const admin=await session('admin'),alice=await session('alice');
+const call=(path,method='GET',body,cookie=admin)=>worker.fetch(new Request(origin+path,{method,headers:{Origin:origin,cookie,'Content-Type':'application/json'},...(body!==undefined?{body:JSON.stringify(body)}:{})}),env,{});
+const ok=async res=>{const response=await res;assert.ok(response.ok,await response.clone().text());return response.json();};
+const accept=a=>call('/api/portal/partner/agreements/'+a.id+'/accept','POST',{accepted:true,document_hash:a.document_hash,document_version:a.document_version,declaration:a.declaration},alice);
+const access=()=>partnerAccess(env.BUCKET,owner,{model:'lead_introduction'});
+try {
+ await ok(call('/api/portal/partner/application','POST',applicationInput(),alice));
+ const standard=STANDARD_AGREEMENTS.lead_introduction;
+ await ok(call('/api/admin/partners/standard-agreements','POST',{model:'lead_introduction',text:standard.text,version:standard.version,commission_bps:500,confirmed:true}));
+ const initial=await ok(call('/api/admin/partners/review','POST',{owner,expected_status:'submitted',status:'approved',approved_models:['lead_introduction'],permissions_by_model:{lead_introduction:['manual_entry']},confirmed:true,explanation:'Synthetic test approval of manual-entry only.'}));
+ assert.equal(initial.issued?.length??initial.agreements_issued?.length??0,1,'First approval must issue the approved standard agreement');
+ let portal=await ok(call('/api/portal/partner','GET',undefined,alice));
+ assert.equal(portal.agreements.length,1);
+ const original=portal.agreements[0];
+ assert.equal(original.status,'issued');
+ assert.deepEqual(original.permissions_snapshot,['manual_entry']);
+ assert.equal((await access()).active,false);
+ await ok(accept(original));
+ assert.equal(allowsPermission(await access(),'manual_entry'),true);
+ assert.equal(allowsPermission(await access(),'excel_import'),false);
+ // Simulate an accepted pre-migration agreement, which never contained a permission snapshot.
+ const key='referrals/agreements/'+await hash(owner)+'/'+original.id+'.json';
+ const legacy=await (await env.BUCKET.get(key)).json();
+ delete legacy.permissions_snapshot;
+ delete legacy.acceptance.permissions_snapshot;
+ await env.BUCKET.put(key,JSON.stringify(legacy));
+ const approved=await ok(call('/api/admin/partners/review','POST',{owner,expected_status:'approved',status:'approved',approved_models:['lead_introduction'],permissions_by_model:{lead_introduction:['manual_entry','excel_import']},confirmed:true,explanation:'Synthetic test: extend only this bracket with Excel import.'}));
+ portal=await ok(call('/api/portal/partner','GET',undefined,alice));
+ const revised=portal.agreements.find(g=>g.status==='issued'&&g.id!==original.id);
+ assert.ok(revised,'Revision must automatically issue on additional permission');
+ assert.equal(revised.supersedes,original.id);
+ assert.deepEqual(revised.permissions_snapshot,['manual_entry','excel_import']);
+ assert.equal(portal.agreements.find(g=>g.id===original.id).status,'accepted');
+ assert.equal(allowsPermission(await access(),'manual_entry'),true,'Previously accepted permission remains usable');
+ assert.equal(allowsPermission(await access(),'excel_import'),false,'New permission stays locked until acceptance');
+ assert.deepEqual(portal.application.permissions_by_model.lead_introduction,['manual_entry'],'Partner UI must expose only active permissions');
+ assert.equal((await call('/api/sales/import/parse?workspace=partner','POST',{},alice)).status,403);
+ await ok(accept(revised));
+ portal=await ok(call('/api/portal/partner','GET',undefined,alice));
+ assert.equal(portal.agreements.find(g=>g.id===original.id).status,'superseded');
+ assert.equal(portal.agreements.find(g=>g.id===revised.id).status,'accepted');
+ assert.equal(allowsPermission(await access(),'manual_entry'),true);
+ assert.equal(allowsPermission(await access(),'excel_import'),true);
+ assert.deepEqual(portal.application.permissions_by_model.lead_introduction,['manual_entry','excel_import']);
+ console.log('Passed: automatic revised agreement, legacy accepted permissions retained, new permissions locked until explicit acceptance, partner UI permissions match backend.');
+} finally {await rm(dir,{recursive:true,force:true});}
