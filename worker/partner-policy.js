@@ -27,4 +27,6 @@ export function applicationView(application){if(!application)return null;const {
 
 export const PERMISSION_KEYS=['manual_entry','excel_import','assigned_leads','call_outcomes','callbacks'];
 export const BRACKET_PERMISSIONS={lead_introduction:['manual_entry','excel_import'],bt38_warm_lead:['assigned_leads','call_outcomes','callbacks','customer_communication','send_quotations'],full_sales:['manual_entry','excel_import','call_outcomes','callbacks','customer_communication','send_quotations']};
-export const allowsPermission=(access,key)=>{const a=access?.application,m=access?.modelId;if(!BRACKET_PERMISSIONS[m]?.includes(key))return false;const p=a?.permissions_by_model?.[m];return Array.isArray(p)?p.includes(key):!PERMISSION_KEYS.includes(key)||!Array.isArray(a?.permissions)||a.permissions.includes(key);};
+export const requestedPermissions=(a,m)=>BRACKET_PERMISSIONS[m]?.filter(k=>Array.isArray(a?.permissions_by_model?.[m])?a.permissions_by_model[m].includes(k):!PERMISSION_KEYS.includes(k)||!Array.isArray(a?.permissions)||a.permissions.includes(k))||[];
+export const effectivePermissions=(a,m,agreements)=>requestedPermissions(a,m).filter(k=>agreements.some(g=>g.model===m&&(g.permissions_snapshot||a?.accepted_permission_baseline?.[m]||requestedPermissions(a,m)).includes(k)));
+export const allowsPermission=(access,key)=>{const a=access?.application,m=access?.modelId;if(!BRACKET_PERMISSIONS[m]?.includes(key))return false;return effectivePermissions(a,m,access.activeAgreements||[]).includes(key);};
