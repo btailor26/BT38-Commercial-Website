@@ -17,6 +17,12 @@ assert.equal((await call('/api/submit','POST',{...d,email:'invalid'})).status,40
 let r=await call('/api/submit','POST',d);assert.equal(r.status,200);const ref=(await r.json()).reference;assert.ok(ref.startsWith('BT38-E-'));
 assert.equal((await (await call('/api/submit','POST',d)).json()).reference,ref);assert.equal([...data.keys()].filter(k=>k.startsWith('records/')).length,1);
 assert.equal((await call('/api/submit','POST',{...d,id:crypto.randomUUID()})).status,429);
+// The existing throttle takes precedence. After it clears, the same details are a duplicate.
+for(const key of [...data.keys()].filter(key=>key.startsWith('limits/')))data.delete(key);
+const duplicateResponse=await call('/api/submit','POST',{...d,id:crypto.randomUUID()});
+assert.equal(duplicateResponse.status,409);
+assert.match((await duplicateResponse.json()).error,/Duplicate record/);
+assert.equal([...data.keys()].filter(k=>k.startsWith('records/')).length,1);
 let rows=await (await call('/api/admin','GET',null,env.ADMIN_EMAIL)).json();assert.equal(rows.records.length,1);
 assert.equal((await call('/api/admin/'+d.id,'PATCH',{kind:'enquiry',status:'Quoted',assigned:'Sales',notes:'Test update'},env.ADMIN_EMAIL)).status,200);
 rows=await (await call('/api/admin','GET',null,env.ADMIN_EMAIL)).json();assert.equal(rows.records[0].status,'Quoted');
