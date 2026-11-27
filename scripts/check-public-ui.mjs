@@ -1,28 +1,48 @@
-import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {chromium} from 'playwright';
-import worker from '../runtime/worker.js';
-import {FileStore} from '../runtime/file-store.js';
-const dir=await mkdtemp(join(tmpdir(),'bt38-public-'));
-const origin='https://public.example.invalid',env={BUCKET:new FileStore(dir),GOOGLE_CLIENT_ID:'fixture.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:'local-ui-test-key-'.repeat(4)};
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+// Actual approved-source comparison against the existing Worker; all writes use disposable local records.
+import assert from 'node:assert/strict';import {mkdtemp,rm,mkdir,readFile,writeFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {performance} from 'node:perf_hooks';import {chromium} from 'playwright';import {PNG} from 'pngjs';
+import worker from '../runtime/worker.js';import {FileStore} from '../runtime/file-store.js';
+const dir=await mkdtemp(join(tmpdir(),'bt38-public-')),origin='https://public.example.invalid',env={BUCKET:new FileStore(dir),GOOGLE_CLIENT_ID:'fixture.apps.googleusercontent.com',GOOGLE_SESSION_SIGNING_KEY:'local-ui-test-key-'.repeat(4)};
+const manifest=JSON.parse(await readFile('frontend/manifest.json','utf8')),full=await readFile('frontend/approved/full-site.html','utf8'),faq=await readFile('frontend/approved/faqs.html','utf8');
+const output=process.env.PUBLIC_QA_OUTPUT||'artifacts/public-frontend';await mkdir(output,{recursive:true});const results=[];
+const browser=await chromium.launch({...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),headless:true,args:['--no-sandbox']});
+async function imagesReady(page){await page.evaluate(async()=>{await Promise.all([...document.images].map(async i=>{i.loading='eager';await i.decode();}));});}
+function compare(actual,reference){const a=PNG.sync.read(actual),b=PNG.sync.read(reference);assert.equal(a.width,b.width,'Approved main width');assert.equal(a.height,b.height,'Approved main height');let changed=0;for(let i=0;i<a.data.length;i+=4){if(Math.max(...[0,1,2].map(j=>Math.abs(a.data[i+j]-b.data[i+j])))>12)changed++;}return changed/(a.width*a.height);}
 try{
 for(const width of [1440,390]){
-const context=await browser.newContext({viewport:{width,height:900}});
-await context.route('**/*',async route=>{const q=route.request();if(new URL(q.url()).origin!==origin)return route.abort();const response=await worker.fetch(new Request(q.url(),{method:q.method(),headers:await q.allHeaders(),...(!['GET','HEAD'].includes(q.method())?{body:q.postDataBuffer()}:{})}),env,{});await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});});
-const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/login','/signup','/faqs']){
-const response=await page.goto(origin+path);assert.equal(response.status(),200,path);await page.locator('main').waitFor();
-assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Horizontal overflow '+path+' '+width);
-if(path==='/integrations'){assert.equal(await page.locator('.package-offer').count(),4);assert.ok(await page.locator('.package-comparison tbody tr').count()>60);await page.getByRole('link',{name:'Discuss Essential ↗',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/contact');}
-if(path==='/faqs'){assert.equal(await page.locator('.customer-faq details').count(),27);const question=page.getByText('If I choose monthly management from the start, do I pay separately for hosting?',{exact:true});await question.click();assert.ok(await question.locator('..').getByText('No. If you choose a BT38 monthly management package from the outset,',{exact:false}).isVisible());}
-if(path==='/login'){assert.equal(await page.locator('main a[href^="/partner"]').count(),0);assert.equal(await page.locator('main a[href^="/auth/google"]').count(),1);}
-if(path==='/contact'){await page.locator('a[href="#quote-form"]').click();assert.equal(new URL(page.url()).hash,'#quote-form');assert.equal(await page.locator('#quote-form').evaluate(f=>f.checkValidity()),false);assert.equal(await page.locator('#quote-form').count(),1);assert.equal(await page.locator('main a[href^="tel:"]').count(),0);}
-if(path==='/work-with-us'){assert.equal(await page.locator('main a[href="/partner/login"]').count(),1);await page.locator('main a[href="/partner/login"]').click();assert.equal(new URL(page.url()).pathname,'/partner/login');await page.goto(origin+path);await page.locator('main a[href="/partner/signup"]').first().click();assert.equal(new URL(page.url()).pathname,'/partner/signup');}
+ const requests=[],errors=[];const context=await browser.newContext({viewport:{width,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});
+ await context.route('**/*',async route=>{const q=route.request(),url=new URL(q.url());if(url.origin!==origin)return route.abort();requests.push({path:url.pathname,method:q.method()});if(url.pathname==='/__approved/full.html'||url.pathname==='/__approved/faqs.html')return route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:url.pathname.includes('faqs')?faq:full});const response=await worker.fetch(new Request(q.url(),{method:q.method(),headers:await q.allHeaders(),...(!['GET','HEAD'].includes(q.method())?{body:q.postDataBuffer()}:{})}),env,{});await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:Buffer.from(await response.arrayBuffer())});});
+ const page=await context.newPage(),reference=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ for(const [path,definition]of Object.entries(manifest.pages)){
+  const start=performance.now(),response=await page.goto(origin+path);assert.equal(response.status(),200,path);const main=page.locator('main[data-approved-page="'+definition.id+'"]');await main.waitFor();await imagesReady(page);const usableMs=performance.now()-start;assert.ok(usableMs<3000,path+' representative local usable time '+usableMs.toFixed(0)+'ms');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Horizontal overflow '+path+' '+width);
+  assert.equal(await page.locator('main').count(),1,'Exactly one public page');assert.ok(!await page.locator('.hero-grid,.diagram,.core').count(),'Original frontend must not be served');
+  const refPath=definition.id==='faqs'?'/__approved/faqs.html#faqs':'/__approved/full.html#'+definition.id;await reference.goto(origin+refPath);await imagesReady(reference);
+  // Only owner-authorised content alignment is applied to the reference; layout/CSS/assets remain independent original preview bytes.
+  if(definition.id==='price'){const wording=await page.locator('[data-commercial-alignment="managed-hosting"]').innerHTML();await reference.locator('#price p').filter({hasText:'Third-party costs:'}).evaluate((p,html)=>{p.innerHTML=html;},wording);}
+  const actual=await main.screenshot({animations:'disabled'}),expected=await reference.locator('main#'+definition.id).screenshot({animations:'disabled'});await writeFile(join(output,definition.id+'-'+width+'-actual.png'),await page.screenshot({fullPage:true,animations:'disabled'}));await writeFile(join(output,definition.id+'-'+width+'-approved.png'),await reference.screenshot({fullPage:true,animations:'disabled'}));
+  const difference=compare(actual,expected);results.push({page:definition.id,width,usable_ms:Math.round(usableMs),changed_pixel_ratio:difference});await writeFile(join(output,'results.json'),JSON.stringify(results,null,2));assert.ok(difference<=0.003,'Approved visual mismatch '+path+' '+width+': '+(100*difference).toFixed(3)+'% of pixels');
+  // Every rendered public navigation/action link resolves to an existing real route, or an existing local anchor.
+  for(const href of await page.locator('a[href]').evaluateAll(nodes=>[...new Set(nodes.map(a=>a.getAttribute('href')))])){
+   if(href.startsWith('#')){assert.ok(await page.locator('[id="'+href.slice(1)+'"]').count(),'Missing anchor '+href);continue;}
+   const url=new URL(href,origin);assert.equal(url.origin,origin,'Public action must stay on the existing application');const r=await worker.fetch(new Request(url),env,{});assert.ok(r.status<400,'Broken action '+href+' '+r.status);
+  }
+  if(definition.id==='home'){
+   const slides=page.locator('.slide'),dots=page.locator('.dot');assert.equal(await slides.count(),5);assert.equal(await dots.count(),5);const current=async()=>page.locator('.slide:not([hidden])').getByRole('heading',{level:2}).innerText();const first=await current();await page.locator('#next').click();assert.notEqual(await current(),first);await page.locator('#prev').click();assert.equal(await current(),first);
+   for(let i=0;i<5;i++){await dots.nth(i).click();assert.equal(await dots.nth(i).getAttribute('aria-current'),'true');assert.equal(await slides.nth(i).isVisible(),true);}
+   await page.locator('#next').focus();await page.keyboard.press('ArrowRight');assert.equal(await dots.nth(0).getAttribute('aria-current'),'true');await page.keyboard.press('ArrowLeft');assert.equal(await dots.nth(4).getAttribute('aria-current'),'true');
+   if(width<500){await page.locator('#frame').dispatchEvent('touchstart',{changedTouches:[{clientX:240}]});await page.locator('#frame').dispatchEvent('touchend',{changedTouches:[{clientX:80}]});assert.equal(await dots.nth(0).getAttribute('aria-current'),'true');}
+  }
+  if(definition.id==='price'){assert.equal(await page.locator('.plan').count(),4);assert.equal(await page.locator('table.comparison tbody tr').count(),72);await page.getByRole('link',{name:'Book an audit ↗',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/checkout');assert.equal(new URL(page.url()).searchParams.get('product'),'audit');}
+  if(definition.id==='faqs'){const details=page.locator('#faqs details');assert.equal(await details.count(),27);for(let i=0;i<27;i++){await details.nth(i).locator('summary').click();assert.equal(await details.nth(i).getAttribute('open'),'');await details.nth(i).locator('summary').click();assert.equal(await details.nth(i).getAttribute('open'),null);}assert.ok(await page.getByText('No. If you choose a BT38 monthly management package from the outset,',{exact:false}).count());}
+  if(definition.id==='login'){assert.equal(await main.locator('a[href^="/partner"]').count(),0);const google=main.locator('a[href^="/auth/google"]');assert.equal(await google.count(),1);assert.equal(new URL(await google.getAttribute('href'),origin).searchParams.get('returnTo'),'/account');}
+  if(definition.id==='contact'){
+   const form=page.locator('#quote-form'),submitted=()=>requests.filter(q=>q.path==='/api/submit'&&q.method==='POST').length,before=submitted();assert.equal(await form.evaluate(f=>f.checkValidity()),false);await form.locator('[type=submit]').click();assert.equal(submitted(),before,'Invalid form must not submit');
+   await page.getByRole('link',{name:'Request a Call ↗',exact:true}).click();assert.match(await form.locator('[name=description]').inputValue(),/arrange a call/);
+   const suffix=width+'-'+crypto.randomUUID();for(const [name,value]of Object.entries({name:'Synthetic UI Enquiry',company:'Isolated '+suffix,email:suffix+'@example.invalid',country:'GB',description:'Isolated migration form test '+suffix}))await form.locator('[name="'+name+'"]').fill(value);await form.locator('[name=service]').selectOption('API Integration');await form.locator('[name=privacy]').check();await page.waitForTimeout(3100);await form.locator('[type=submit]').click();await form.locator('.form-result').filter({hasText:'BT38-E-'}).waitFor();assert.equal(submitted(),before+1);assert.equal(await form.locator('[type=submit]').isDisabled(),true);
+  }
+  if(definition.id==='work-with-us'){await main.locator('a[href="/partner/signup"]').first().click();assert.equal(new URL(page.url()).pathname,'/partner/signup');await page.goto(origin+path);await page.locator('main a[href="/partner/login"]').click();assert.equal(new URL(page.url()).pathname,'/partner/login');}
+ }
+ assert.deepEqual(errors,[]);await context.close();
 }
-assert.deepEqual(errors,[]);await context.close();
-}
-}finally{await browser.close();await rm(dir,{recursive:true,force:true});}
-console.log('Public desktop and mobile routes, layout and selected actions passed');
+console.log('Passed: all nine approved public pages at desktop/mobile widths, direct source pixel comparisons, 18 original assets, complete navigation/actions, manual slideshow/dots/keyboard/swipe, all 27 FAQs, isolated valid/invalid contact/callback submissions and customer/partner/auth/checkout destinations.');
+}finally{await browser.close();await rm(dir,{recursive:true,force:true});await writeFile(join(output,'results.json'),JSON.stringify(results,null,2));}

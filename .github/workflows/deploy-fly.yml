@@ -69,6 +69,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify partner administration and acceptance on desktop and mobile
         run: npm run test:ui
+      - name: Verify approved public frontend before production deployment
+        run: node scripts/check-public-ui.mjs
 
   deploy:
     needs: audit

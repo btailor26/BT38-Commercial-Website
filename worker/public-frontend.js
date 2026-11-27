@@ -1,0 +1,3 @@
+import frontend from '../.generated/public-frontend.json' with {type:'json'};
+export const approvedPublicPage=path=>frontend.pages[path]??null;
+export function approvedPublicAsset(req,path){const a=frontend.assets[path];if(!a)return null;const headers={'Content-Type':a.mime,'X-Content-Type-Options':'nosniff','Cache-Control':path.startsWith('/assets/approved/')?'public, max-age=31536000, immutable':'public, max-age=0, must-revalidate',ETag:'"'+a.sha256+'"'};if(req.headers.get('if-none-match')===headers.ETag)return new Response(null,{status:304,headers});return new Response(Uint8Array.from(atob(a.base64),c=>c.charCodeAt(0)),{headers});}

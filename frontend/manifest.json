@@ -1,0 +1,179 @@
+{
+  "rollback_commit": "26154661c13d79ab2e5acb8c8985770f8dfe1d4c",
+  "sources": [
+    {
+      "name": "BT38-separate-customer-login-preview.html",
+      "sha256": "acaf5263b6efb94c7073d2d68e1ba2494248c55f42b8be1c9d8dce05a2f1126e",
+      "library_file_id": "libfile_1a5a45c9fe348191a74159509f7cbf59"
+    },
+    {
+      "name": "BT38-FAQ-monthly-management-preview.html",
+      "sha256": "f07e3f4e224500f5c8cb52b03ef7b012d13c8cb876e2abcd7e9aa08c037a9968",
+      "library_file_id": "libfile_d415ad8b7edc8191ae9e0b5d7b8da80f"
+    }
+  ],
+  "assets": {
+    "/assets/approved/ea742a33b7d710277011a7a1.webp": {
+      "file": "frontend/assets/ea742a33b7d710277011a7a1.webp",
+      "mime": "image/webp",
+      "sha256": "ea742a33b7d710277011a7a1902b6a39d90a8e9fcfe86aede3a6da5fd82b768f",
+      "bytes": 133516
+    },
+    "/assets/approved/5cbccb54d119e7946385c450.webp": {
+      "file": "frontend/assets/5cbccb54d119e7946385c450.webp",
+      "mime": "image/webp",
+      "sha256": "5cbccb54d119e7946385c450aed18a9a228b8efcd313d375bf7cd24573c49507",
+      "bytes": 11592
+    },
+    "/assets/approved/68421e1578e607fc295e9901.webp": {
+      "file": "frontend/assets/68421e1578e607fc295e9901.webp",
+      "mime": "image/webp",
+      "sha256": "68421e1578e607fc295e99010647f0bedabb3701fae6a31fb05ad30026a77e4a",
+      "bytes": 17186
+    },
+    "/assets/approved/381446e0bfa91ddefb63f0e5.webp": {
+      "file": "frontend/assets/381446e0bfa91ddefb63f0e5.webp",
+      "mime": "image/webp",
+      "sha256": "381446e0bfa91ddefb63f0e58e42f39b7f983e3f8edd393872e615258d993bb3",
+      "bytes": 8798
+    },
+    "/assets/approved/b70de648a2905479fffb0c69.webp": {
+      "file": "frontend/assets/b70de648a2905479fffb0c69.webp",
+      "mime": "image/webp",
+      "sha256": "b70de648a2905479fffb0c69f6a2cc0936bd9c77549b57fa01cfae835447ef82",
+      "bytes": 13856
+    },
+    "/assets/approved/365e0d8b7e216cda11683621.webp": {
+      "file": "frontend/assets/365e0d8b7e216cda11683621.webp",
+      "mime": "image/webp",
+      "sha256": "365e0d8b7e216cda11683621af9f492a104339a9949360a12248a8ff00a588e9",
+      "bytes": 13354
+    },
+    "/assets/approved/4410d61f6c327504e9956955.webp": {
+      "file": "frontend/assets/4410d61f6c327504e9956955.webp",
+      "mime": "image/webp",
+      "sha256": "4410d61f6c327504e9956955391f7bd2256490d8c7ed30b780cd6f69576cf2fd",
+      "bytes": 11404
+    },
+    "/assets/approved/1b0f186300de0573b99c028e.webp": {
+      "file": "frontend/assets/1b0f186300de0573b99c028e.webp",
+      "mime": "image/webp",
+      "sha256": "1b0f186300de0573b99c028ec5a885fc483830ce3deb6c864291c402ba555ab6",
+      "bytes": 75812
+    },
+    "/assets/approved/758225c5e1f5a1bc98de7739.webp": {
+      "file": "frontend/assets/758225c5e1f5a1bc98de7739.webp",
+      "mime": "image/webp",
+      "sha256": "758225c5e1f5a1bc98de77393b53d5cf334078fd609db7dd5530f4fb9b6df03b",
+      "bytes": 72096
+    },
+    "/assets/approved/1833c84e832e0b8ad16fbef5.webp": {
+      "file": "frontend/assets/1833c84e832e0b8ad16fbef5.webp",
+      "mime": "image/webp",
+      "sha256": "1833c84e832e0b8ad16fbef5ffe323e0065425bb546bed27e54e78cbc30d1ab7",
+      "bytes": 49890
+    },
+    "/assets/approved/c24d018a2d5a5e5c474f65e5.webp": {
+      "file": "frontend/assets/c24d018a2d5a5e5c474f65e5.webp",
+      "mime": "image/webp",
+      "sha256": "c24d018a2d5a5e5c474f65e5291a4bb192ad18e9c80605f8b22874833cc0a75a",
+      "bytes": 72434
+    },
+    "/assets/approved/f026b7fbfca112f87efeb2dc.webp": {
+      "file": "frontend/assets/f026b7fbfca112f87efeb2dc.webp",
+      "mime": "image/webp",
+      "sha256": "f026b7fbfca112f87efeb2dcc43a6aa9bf05894d3155424043d8fc2723626dc3",
+      "bytes": 32992
+    },
+    "/assets/approved/1e2db65bf267df76f6ffc680.png": {
+      "file": "frontend/assets/1e2db65bf267df76f6ffc680.png",
+      "mime": "image/png",
+      "sha256": "1e2db65bf267df76f6ffc6809477bd630c7146742dc3fac5f86270b8b3c004d1",
+      "bytes": 69293
+    },
+    "/assets/approved/452d757c0aa96c03f09c2477.png": {
+      "file": "frontend/assets/452d757c0aa96c03f09c2477.png",
+      "mime": "image/png",
+      "sha256": "452d757c0aa96c03f09c2477edd17231f7d4c869fe868504a01e6504e73a594b",
+      "bytes": 101204
+    },
+    "/assets/approved/a21273b49ad5cc00b0a6f879.png": {
+      "file": "frontend/assets/a21273b49ad5cc00b0a6f879.png",
+      "mime": "image/png",
+      "sha256": "a21273b49ad5cc00b0a6f87926e126095a7e25a560bdd16eaf7fa297eb9a1e91",
+      "bytes": 103745
+    },
+    "/assets/approved/5597e83e46898cb4f7da6ff9.png": {
+      "file": "frontend/assets/5597e83e46898cb4f7da6ff9.png",
+      "mime": "image/png",
+      "sha256": "5597e83e46898cb4f7da6ff9136fafcb3c526c634f7de9c3d3b989a7932b7747",
+      "bytes": 68627
+    },
+    "/assets/approved/6a5a2112b7b23f405e657f7c.png": {
+      "file": "frontend/assets/6a5a2112b7b23f405e657f7c.png",
+      "mime": "image/png",
+      "sha256": "6a5a2112b7b23f405e657f7cfaf08f892da6aea254f87b71a9bd466a87b00c9e",
+      "bytes": 82784
+    },
+    "/assets/approved/c416351416b6ce95b41329e4.webp": {
+      "file": "frontend/assets/c416351416b6ce95b41329e4.webp",
+      "mime": "image/webp",
+      "sha256": "c416351416b6ce95b41329e4f81350f72c94c7385b74342647572b835cbc8aea",
+      "bytes": 81532
+    }
+  },
+  "pages": {
+    "/": {
+      "id": "home",
+      "file": "frontend/pages/home.html",
+      "sha256": "5f612d606b4023d92e6786612defad1e9ad6d841b83bf317181a0a08191f450e"
+    },
+    "/services": {
+      "id": "services",
+      "file": "frontend/pages/services.html",
+      "sha256": "b66ea36eaf66385fd7fcbc4c8bff135512023bede911be271a8d758704a8b189"
+    },
+    "/integrations": {
+      "id": "price",
+      "file": "frontend/pages/price.html",
+      "sha256": "ca4dd8d5159e9549cb6a21744f0c8ab688ffba3e2875dd37aed7a8c4c80ef86d"
+    },
+    "/solutions": {
+      "id": "solutions",
+      "file": "frontend/pages/solutions.html",
+      "sha256": "d09e9f469409befbb9f5fbebab2770233194e8d81fce39d41ee9a25a1e0dd2e1"
+    },
+    "/about": {
+      "id": "about",
+      "file": "frontend/pages/about.html",
+      "sha256": "3d528e36a8331f70040ecfd05c8accd4de7dfef67d8ae01e3b47c4532a17576d"
+    },
+    "/work-with-us": {
+      "id": "work-with-us",
+      "file": "frontend/pages/work-with-us.html",
+      "sha256": "421c2b687b49c2998c13f32ddbf09885f55f65c60191da973d9ae2262fcfdf33"
+    },
+    "/contact": {
+      "id": "contact",
+      "file": "frontend/pages/contact.html",
+      "sha256": "76edfabf3960f8d065ad34752172a52afe0a65d8b8a3467dd843b9c7a9d39451"
+    },
+    "/login": {
+      "id": "login",
+      "file": "frontend/pages/login.html",
+      "sha256": "c6a0dada25b92dac6e33f72610d08f1cd076234e46a6f33619347e355b069884"
+    },
+    "/faqs": {
+      "id": "faqs",
+      "file": "frontend/pages/faqs.html",
+      "sha256": "ca413c39914147b294887e4c0a0235ab3fc567e3799264f1576642079334770a"
+    }
+  },
+  "approved_adjustments": [
+    "Preview hash routes mapped to existing application URLs; FAQ navigation shared across pages.",
+    "Contact fields bound to existing /api/submit handler with unchanged server validation, spam protection and referral attribution.",
+    "Partner application links bound to existing /partner/signup and /partner/login journeys.",
+    "Monthly management hosting clarification requested by the owner; self-hosted costs remain customer responsibility.",
+    "Team sign-in uses protected /admin; Google customer login retains /account return path."
+  ]
+}

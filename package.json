@@ -9,7 +9,9 @@
     "start": "node --env-file-if-exists=.env runtime/server.js",
     "test": "node scripts/test.mjs",
     "build:sites": "bash scripts/build.sh",
-    "test:ui": "node scripts/check-partner-ui.mjs"
+    "test:ui": "node scripts/check-partner-ui.mjs",
+    "pretest": "node scripts/build-public-frontend.mjs",
+    "prebuild": "node scripts/build-public-frontend.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
@@ -22,7 +24,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
-    "playwright": "1.65.1"
+    "playwright": "1.65.1",
+    "pngjs": "7.0.0"
   },
   "engines": {
     "node": ">=22.12"
