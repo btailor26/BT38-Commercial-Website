@@ -45,3 +45,5 @@ No Google secret, database/schema/record, Revolut integration, authentication pe
 - GitHub verification retains `approved-public-frontend-evidence`. The governed production workflow now runs the same public visual/functional suite before its existing deployment job.
 
 Do not treat a build/HTTP response as visual verification. Do not deploy on a failing visual test. The owner must approve deployment of the exact final verified SHA. Production is unchanged until the governed workflow is explicitly dispatched.
+
+The first direct screenshot gate caught a 0.339% homepage mismatch around the trust panel and actions. The supplied preview places styles before its DOCTYPE and is rendered in browser compatibility mode. Migrated pages preserve that original stylesheet/DOCTYPE order rather than changing the CSS or weakening the pixel gate. The final browser run is authoritative for the corrected source.
