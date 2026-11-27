@@ -24,6 +24,10 @@ export const PORTAL_CSS=`.pricing-offers{grid-template-columns:repeat(3,minmax(0
 const intro=`<section class="pagehero partner-heading"><div class="wrap"><div class="eyebrow">Work With Us</div><h1>Your partnership workspace.</h1><p class="intro">Apply, review your approval status and manage your approved partnership. Customer accounts remain separate.</p></div></section>`;
 export function portalPage(html,path){
  html=commercialContent(html,path);
+ html=html.replace('Ecommerce technology that works around your business. UK-based. Internationally minded.','An ecommerce technology partner that understands your business and its architecture. Whether you\'re based in the UK or anywhere in the world, we\'ve got you covered.').replace('<span>Leicester, United Kingdom</span>','').replace('<a href="/partner">Partner account</a>','').replace('<a href="/" class="logo">BT<span>38</span></a>','');
+ if(path==='/signup')html=html.replace('<p class="muted">Joining as a referral partner? <a href="/partner">Register as a partner ↗</a></p>','');
+ if(path==='/contact')html=html.replace('Unit 10, St Mark’s Works','10, St Mark’s Works').replace('Prefer a conversation?','Let’s discuss your business').replace('<p class="muted" style="font-size:11px">Telephone: <a href="tel:+447774257009">07774 257009</a></p>','');
+
  // Public page styling is isolated from authenticated workspaces and existing form handlers.
  const publicPages=['/services','/integrations','/solutions','/about','/contact','/work-with-us','/login','/signup'];
  if(publicPages.includes(path)){
