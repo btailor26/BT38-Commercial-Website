@@ -40,7 +40,7 @@ for(const width of [1440,390]){
    await page.getByRole('link',{name:'Request a Call ↗',exact:true}).click();assert.match(await form.locator('[name=description]').inputValue(),/arrange a call/);
    const suffix=width+'-'+crypto.randomUUID();for(const [name,value]of Object.entries({name:'Synthetic UI Enquiry',company:'Isolated '+suffix,email:suffix+'@example.invalid',country:'GB',description:'Isolated migration form test '+suffix}))await form.locator('[name="'+name+'"]').fill(value);await form.locator('[name=service]').selectOption('API Integration');await form.locator('[name=privacy]').check();await page.waitForTimeout(3100);await form.locator('[type=submit]').click();await form.locator('.form-result').filter({hasText:'BT38-E-'}).waitFor();assert.equal(submitted(),before+1);assert.equal(await form.locator('[type=submit]').isDisabled(),true);
   }
-  if(definition.id==='work-with-us'){await main.locator('a[href="/partner/signup"]').first().click();assert.equal(new URL(page.url()).pathname,'/partner/signup');await page.goto(origin+path);await page.locator('main a[href="/partner/login"]').click();assert.equal(new URL(page.url()).pathname,'/partner/login');}
+  if(definition.id==='work-with-us'){await main.locator('a[href="/partner/signup"]').first().click();assert.equal(new URL(page.url()).pathname,'/partner/signup');await page.goto(origin+path);await page.locator('main a[href="/partner/login"]').click();assert.equal(new URL(page.url()).pathname,'/auth/google');assert.equal(new URL(page.url()).searchParams.get('returnTo'),'/partner');}
  }
  assert.deepEqual(errors,[]);await context.close();
 }
