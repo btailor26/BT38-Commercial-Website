@@ -19,7 +19,9 @@ const profile={...applicationInput({}),name:'Alice',company:'Alice agency',phone
 const lead=(email='buyer@customer.invalid',company='Buyer company')=>({id:crypto.randomUUID(),company,name:'Buyer',email,phone:'',country:'GB',website:'',service:'API Integration',requirements:'Connect the existing order platform.',description:'Customer requested a discussion about connecting orders.',additional_notes:'',authorised:true});
 let signal,reader;
 try{
- for(const path of ['/partner','/partner/signup','/partner/login','/work-with-us','/account','/faqs'])assert.equal((await call(path)).status,200,path);
+ for(const path of ['/partner','/partner/signup','/work-with-us','/account','/faqs'])assert.equal((await call(path)).status,200,path);
+ const partnerLogin=await call('/partner/login');assert.equal(partnerLogin.status,302,'Signed-out partner should bypass legacy login page');assert.equal(partnerLogin.headers.get('Location'),'/auth/google?returnTo=%2Fpartner');
+ const signedInPartner=await call('/partner/login','GET',null,alice);assert.equal(signedInPartner.status,302);assert.equal(signedInPartner.headers.get('Location'),'/partner');
  assert.equal((await call('/api/portal/partner')).status,401);assert.equal((await call('/api/portal/partner','GET',null,'',{'oai-authenticated-user-id':'fake','oai-authenticated-user-email':'admin@gmail.com'})).status,401);
  assert.equal((await call('/api/admin/commercial','GET',null,alice)).status,403);
  const prior={...profile,owner:'google:alice',email:'alice@gmail.com',created_at:'2026-01-01T00:00:00Z',custom_existing:'preserved'};await env.BUCKET.put('referrals/profiles/'+await hash('google:alice')+'.json',JSON.stringify(prior));
