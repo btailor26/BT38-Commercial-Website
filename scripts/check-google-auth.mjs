@@ -23,4 +23,13 @@ r=await worker.fetch(new Request(origin+'/api/customer/account',{method:'POST',h
 r=await worker.fetch(new Request(origin+'/api/customer/account',{headers:{cookie}}),env,{});assert.equal((await r.json()).profile.email,'alice@gmail.com');
 r=await googleAuthApi(req('/api/auth/logout',{},cookie),env,new URL(origin+'/api/auth/logout'),{json,body},keys);assert.equal(r.status,200);assert.ok(r.headers.getSetCookie()[0].includes('Max-Age=0'));
 for(const path of ['/signup','/login','/partner','/auth/google']){const response=await worker.fetch(new Request(origin+path),env,{});assert.equal(response.status,200);const h=await response.text();assert.ok(!h.includes('Continue with ChatGPT'));}
+const route=async(path,session='')=>worker.fetch(new Request(origin+path,{headers:{cookie:session}}),env,{});
+for(const [path,expected] of [['/login','/account'],['/partner/login','/partner'],['/auth/google?returnTo=%2Fpartner','/partner']]){
+  const response=await route(path,cookie);assert.equal(response.status,302,'Existing valid Google session: '+path);assert.equal(response.headers.get('location'),expected);
+  assert.equal(response.headers.get('Cache-Control'),'no-store');
+}
+const signedOutPartner=await route('/partner/login');assert.equal(signedOutPartner.status,302);assert.equal(signedOutPartner.headers.get('location'),'/auth/google?returnTo=%2Fpartner');
+const signedOutCustomer=await route('/login');assert.equal(signedOutCustomer.status,200);
+const tampered=await route('/partner/login',cookie+'x');assert.equal(tampered.status,302);assert.equal(tampered.headers.get('location'),'/auth/google?returnTo=%2Fpartner');
+const unsafe=await route('/auth/google?returnTo='+encodeURIComponent('//attacker.example.invalid'),cookie);assert.equal(unsafe.status,302);assert.equal(unsafe.headers.get('location'),'/account');
 console.log('Passed: signed Google tokens, audience/nonce/email checks, CSRF, secure session cookies, session audience binding, forged identity rejection, customer ownership and logout.');
