@@ -1,1 +1,11 @@
-let i=0;const slides=[...document.querySelectorAll('.slide')],dots=[...document.querySelectorAll('.dot')];function show(n){i=(n+5)%5;slides.forEach((s,j)=>s.hidden=j!==i);dots.forEach((d,j)=>d.setAttribute('aria-current',j===i))}document.getElementById("prev").onclick=()=>show(i-1);document.getElementById("next").onclick=()=>show(i+1);dots.forEach((d,j)=>d.onclick=()=>show(j));let x;document.getElementById("frame").addEventListener('touchstart',e=>x=e.changedTouches[0].clientX,{passive:true});document.getElementById("frame").addEventListener('touchend',e=>{let d=e.changedTouches[0].clientX-x;if(Math.abs(d)>45)show(i+(d<0?1:-1))},{passive:true});document.querySelector('.carousel').addEventListener('keydown',e=>{if(e.key==='ArrowRight')show(i+1);if(e.key==='ArrowLeft')show(i-1)});
+const carousel=document.querySelector('.carousel'),frame=document.getElementById('frame');
+if(carousel&&frame){
+ const slides=[...frame.querySelectorAll('.slide')],dots=[...carousel.querySelectorAll('.dot')];let i=0,start=null;
+ function show(n){if(!slides.length)return;i=(n%slides.length+slides.length)%slides.length;slides.forEach((s,j)=>s.hidden=j!==i);dots.forEach((d,j)=>d.setAttribute('aria-current',String(j===i)));}
+ frame.querySelector('#prev').onclick=()=>show(i-1);frame.querySelector('#next').onclick=()=>show(i+1);dots.forEach((d,j)=>d.onclick=()=>show(j));
+ frame.addEventListener('touchstart',e=>{start=null;if(e.touches.length!==1||e.target.closest('button'))return;const t=e.changedTouches[0];start={id:t.identifier,x:t.clientX,y:t.clientY};},{passive:true});
+ frame.addEventListener('touchcancel',()=>{start=null;},{passive:true});
+ frame.addEventListener('touchend',e=>{if(!start)return;const t=[...e.changedTouches].find(t=>t.identifier===start.id);const a=start;start=null;if(!t)return;const dx=t.clientX-a.x,dy=t.clientY-a.y;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.5)show(i+(dx<0?1:-1));},{passive:true});
+ carousel.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();show(i+(e.key==='ArrowRight'?1:-1));}});
+ show(0);
+}
