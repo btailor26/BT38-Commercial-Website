@@ -18,8 +18,8 @@ const response=await page.goto(origin+path);assert.equal(response.status(),200,p
 assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Horizontal overflow '+path+' '+width);
 if(path==='/integrations'){assert.equal(await page.locator('.package-offer').count(),4);assert.ok(await page.locator('.package-comparison tbody tr').count()>60);await page.getByRole('link',{name:'Discuss Essential ↗',exact:true}).click();assert.equal(new URL(page.url()).pathname,'/contact');}
 if(path==='/login'){assert.equal(await page.locator('main a[href^="/partner"]').count(),0);assert.equal(await page.locator('main a[href^="/auth/google"]').count(),1);}
-if(path==='/contact'){assert.equal(await page.locator('#quote-form').count(),1);assert.equal(await page.locator('main a[href^="tel:"]').count(),0);}
-if(path==='/work-with-us'){assert.equal(await page.locator('main a[href="/partner/login"]').count(),1);}
+if(path==='/contact'){await page.locator('a[href="#quote-form"]').click();assert.equal(new URL(page.url()).hash,'#quote-form');assert.equal(await page.locator('#quote-form').evaluate(f=>f.checkValidity()),false);assert.equal(await page.locator('#quote-form').count(),1);assert.equal(await page.locator('main a[href^="tel:"]').count(),0);}
+if(path==='/work-with-us'){assert.equal(await page.locator('main a[href="/partner/login"]').count(),1);await page.locator('main a[href="/partner/login"]').click();assert.equal(new URL(page.url()).pathname,'/partner/login');await page.goto(origin+path);await page.locator('main a[href="/partner/signup"]').first().click();assert.equal(new URL(page.url()).pathname,'/partner/signup');}
 }
 assert.deepEqual(errors,[]);await context.close();
 }
