@@ -25,6 +25,7 @@ const intro=`<section class="pagehero partner-heading"><div class="wrap"><div cl
 export function portalPage(html,path){
  html=commercialContent(html,path);
  html=html.replace('Ecommerce technology that works around your business. UK-based. Internationally minded.','An ecommerce technology partner that understands your business and its architecture. Whether you\'re based in the UK or anywhere in the world, we\'ve got you covered.').replace('<span>Leicester, United Kingdom</span>','').replace('<a href="/partner">Partner account</a>','').replace('<a href="/" class="logo">BT<span>38</span></a>','');
+ if(path==='/')html=html.replace(/<section class="section" style="padding-top:0"><div class="wrap"><div class="partner-banner">[\s\S]*?<\/section>/,'');
  if(path==='/signup')html=html.replace('<p class="muted">Joining as a referral partner? <a href="/partner">Register as a partner ↗</a></p>','');
  if(path==='/contact')html=html.replace('Unit 10, St Mark’s Works','10, St Mark’s Works').replace('Prefer a conversation?','Let’s discuss your business').replace('<p class="muted" style="font-size:11px">Telephone: <a href="tel:+447774257009">07774 257009</a></p>','');
 
