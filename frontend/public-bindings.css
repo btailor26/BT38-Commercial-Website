@@ -4,3 +4,6 @@
 body>header{position:sticky;top:0;z-index:1000}
 .skip-link:focus{z-index:1001}
 html{scroll-padding-top:var(--bt38-header-height, 100px)}
+
+#features #frame{touch-action:pan-y pinch-zoom}
+@media(pointer:coarse){#features .controls .dot{position:relative;touch-action:manipulation}#features .controls .dot::after{content:"";position:absolute;inset:-14px -6px}#features #prev::after,#features #next::after{content:"";position:absolute;inset:-4px}#features #prev,#features #next{touch-action:manipulation}}
