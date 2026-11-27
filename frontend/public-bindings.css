@@ -1,1 +1,6 @@
 .skip-link{position:absolute;left:-10000px}.skip-link:focus{left:8px;top:8px;z-index:100;background:white;color:#12304a;padding:10px}html{scroll-behavior:smooth}#quote-form .form-result{overflow-wrap:anywhere}#quote-form .form-result.error{color:#9a3932}
+
+/* Keep the approved public navigation visible while scrolling. */
+body>header{position:sticky;top:0;z-index:1000}
+.skip-link:focus{z-index:1001}
+html{scroll-padding-top:var(--bt38-header-height, 100px)}
