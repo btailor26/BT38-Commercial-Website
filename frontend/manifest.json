@@ -121,27 +121,27 @@
     "/": {
       "id": "home",
       "file": "frontend/pages/home.html",
-      "sha256": "ab079e033eac6b9cfbebdf28541672ff6d158c3bc53ba4c3283a80f462438fcc"
+      "sha256": "b62cc66279e150ee3c8861c7b4f63d0f49020f4d97a0c15dadaf37185dd5ba7a"
     },
     "/solutions": {
       "id": "solutions",
       "file": "frontend/pages/solutions.html",
-      "sha256": "ea6cdb0ed312682d7efd782e337a7d077cc39056a1abd264419b6434d51f33d2"
+      "sha256": "f656a506d505184b09140c7967b607d416a180ae734235cd81f19c495c774879"
     },
     "/contact": {
       "id": "contact",
       "file": "frontend/pages/contact.html",
-      "sha256": "8b0171878a7c1014e8e5eb87485820eabb3764101579cf1e04fefab4d99b888c"
+      "sha256": "d7d9e95998f060bb36c52337d44a1d87d7043a6307704de47d52eb219b90e670"
     },
     "/login": {
       "id": "login",
       "file": "frontend/pages/login.html",
-      "sha256": "0af23679d23bff67e8ba46fd416235cff71117258def5fe6dad916edf7ef4114"
+      "sha256": "e5e90c0f6381e31533a78178caa046b8ae5021fd143898a5ff6bdd625b64ddbe"
     },
     "/work-with-us": {
       "id": "work-with-us",
       "file": "frontend/pages/work-with-us.html",
-      "sha256": "1d8f9e697feba38569acf5ccb47c4fa3033684e297f77caec31063bf8e13a766"
+      "sha256": "9c82650c9b79c8ea58e609cd7fd73b4234a1755241683d889af6afcf44110b47"
     }
   },
   "approved_adjustments": [

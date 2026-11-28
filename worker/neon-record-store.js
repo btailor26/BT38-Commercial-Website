@@ -26,9 +26,9 @@ export class NeonRecordStore {
  for(const w of writes)this.cache.delete(w.key);return Number(rows[0]?.updated)===writes.length;
  }
  async purgeExpiredPublicChats(now,limit=20){
- const cap=Math.min(20,Math.max(1,limit));
- // Only public-chat records qualify. Wipe body as well as tombstoning; never scan or rebuild CRM data.
- const rows=await this.query("WITH expired AS (SELECT record_key FROM website.records WHERE site_id=$1 AND record_key LIKE 'public-chat/%' AND NOT deleted AND (payload->>'expires_at')::bigint <= $2 ORDER BY record_key LIMIT $3 FOR UPDATE SKIP LOCKED) UPDATE website.records r SET body='null',deleted=true,revision=revision+1,updated_at=now() FROM expired e WHERE r.site_id=$1 AND r.record_key=e.record_key RETURNING r.record_key",['bt38inv',now,cap]);
+ const cap=Math.min(20,Math.max(1,limit)),until=String(now).padStart(13,'0')+'~';
+ // Expiry-first keys use the existing (site_id, record_key) index: no JSON scan, table or new index.
+ const rows=await this.query("WITH expired AS (SELECT record_key FROM website.records WHERE site_id=$1 AND NOT deleted AND ((record_key >= 'public-chat/conversations/' AND record_key <= $2) OR (record_key >= 'public-chat/limits/' AND record_key <= $3)) ORDER BY record_key LIMIT $4 FOR UPDATE SKIP LOCKED) UPDATE website.records r SET body='null',deleted=true,revision=revision+1,updated_at=now() FROM expired e WHERE r.site_id=$1 AND r.record_key=e.record_key RETURNING r.record_key",['bt38inv','public-chat/conversations/'+until,'public-chat/limits/'+until,cap]);
  for(const r of rows)this.cache.delete(r.record_key);return rows.length;
  }
  async delete(key){await this.query("INSERT INTO website.records(site_id,record_key,body,deleted) VALUES ($1,$2,'null',true) ON CONFLICT (site_id,record_key) DO UPDATE SET body='null',deleted=true,revision=website.records.revision+1,updated_at=now()",['bt38inv',key]);this.cache.delete(key);}
