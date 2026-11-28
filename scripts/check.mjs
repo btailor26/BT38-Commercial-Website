@@ -6,7 +6,7 @@ const env={BUCKET,ADMIN_EMAIL:'admin@example.invalid',GOOGLE_CLIENT_ID:'test-cli
 async function testSession(email){return '__Host-bt38-google='+await new SignJWT({purpose:'session',email}).setProtectedHeader({alg:'HS256'}).setSubject('smoke-test-'+email).setIssuer('bt38-website').setAudience(origin).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(env.GOOGLE_SESSION_SIGNING_KEY));}
 const adminCookie=await testSession(env.ADMIN_EMAIL),visitorCookie=await testSession('unauthorised@example.invalid');
 async function call(path,method='GET',value,auth){let headers={origin,'Content-Type':'application/json'};if(auth)headers.cookie=auth===env.ADMIN_EMAIL?adminCookie:visitorCookie;return worker.fetch(new Request(origin+path,{method,headers,...(value?{body:JSON.stringify(value)}:{})}),env,{});}
-for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/privacy'])assert.equal((await call(path)).status,200,path);
+for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/privacy'])assert.equal((await call(path)).status,['/services','/integrations','/about','/faqs'].includes(path)?308:200,path);
 const adminRedirect=await call('/admin');assert.equal(adminRedirect.status,302,'Unauthenticated administrator sign-in redirect');assert.equal(adminRedirect.headers.get('location'),origin+'/auth/google?returnTo=%2Fadmin');
 assert.equal((await call('/admin','GET',null,'unauthorised@example.invalid')).status,403,'Signed non-admin must not access administrator page');
 assert.equal((await call('/admin','GET',null,env.ADMIN_EMAIL)).status,200,'Signed administrator must reach dashboard');

@@ -39,7 +39,7 @@ const changedTerms=await (await call('/api/admin/referral-settings','POST',{...c
 assert.equal((await read('/api/referral/account','alice')).partner.terms.commission_bps,1000);
 assert.equal((await call('/api/admin/referral-paid','POST',{id:payment.id,payout_reference:'bank-transfer-1'},'owner')).status,409);
 assert.equal((await read('/api/referral/account','alice')).entries.find(x=>x.id===payment.id).status,'recorded');
-const home=await (await call('/')).text();assert.ok(home.includes('data-approved-page="home"'));for(const p of ['/price','/integrations']){const h=await (await call(p)).text();assert.ok(h.includes('£4,999'));assert.ok(h.includes('data-approved-page="price"'));}
+const home=await (await call('/')).text();assert.ok(home.includes('data-approved-page="home"'));for(const p of ['/price','/integrations']){const r=await call(p);assert.equal(r.status,308);assert.equal(r.headers.get('Location'),'/#price');assert.ok(home.includes('£4,999'));assert.ok(home.includes('id="price"'));}
 for(const p of ['/partner','/referral-terms'])assert.equal((await call(p)).status,200);
 new Function(await (await call('/referral.js')).text());
 console.log('Passed: referral auth, registration gate, terms versioning, stable unique links, attribution, self-referral rejection, private records, receipt idempotency, refunds, historical rate preservation, payout records and client syntax.');

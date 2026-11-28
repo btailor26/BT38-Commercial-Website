@@ -1,15 +1,10 @@
 {
-  "rollback_commit": "26154661c13d79ab2e5acb8c8985770f8dfe1d4c",
+  "rollback_commit": "1e42fd95899a8a13bb07657c92d43a67ae9c08f1",
   "sources": [
     {
-      "name": "BT38-separate-customer-login-preview.html",
-      "sha256": "acaf5263b6efb94c7073d2d68e1ba2494248c55f42b8be1c9d8dce05a2f1126e",
-      "library_file_id": "libfile_1a5a45c9fe348191a74159509f7cbf59"
-    },
-    {
-      "name": "BT38-FAQ-monthly-management-preview.html",
-      "sha256": "f07e3f4e224500f5c8cb52b03ef7b012d13c8cb876e2abcd7e9aa08c037a9968",
-      "library_file_id": "libfile_d415ad8b7edc8191ae9e0b5d7b8da80f"
+      "name": "BT38-chat-aligned-preview.html",
+      "sha256": "797b551bf373b73fd29dfd1e91d685d01373af3acd7b2f340e05f6f2bbe00c35",
+      "library_file_id": "libfile_0a7f238863248191bf0bbe02b75a5b88"
     }
   ],
   "assets": {
@@ -126,55 +121,36 @@
     "/": {
       "id": "home",
       "file": "frontend/pages/home.html",
-      "sha256": "cbb09dc9e921fe65e0db314293c5270c912d6c1ce1a9f50492a7a6ce7094458c"
-    },
-    "/services": {
-      "id": "services",
-      "file": "frontend/pages/services.html",
-      "sha256": "c9f5d36ee98bd58c7a4a06db9cf8eef8fffa471e347589e1ce116238ea4a9fef"
-    },
-    "/integrations": {
-      "id": "price",
-      "file": "frontend/pages/price.html",
-      "sha256": "13a86a494b3181fc03da8a8c0e980910c487b9dda75464b42cbc52ecd7079658"
+      "sha256": "ab079e033eac6b9cfbebdf28541672ff6d158c3bc53ba4c3283a80f462438fcc"
     },
     "/solutions": {
       "id": "solutions",
       "file": "frontend/pages/solutions.html",
-      "sha256": "9f199e7e6e1b70b88d8095bc6cfb9c1e3da6b404a01966cf15a399a5fb4ac572"
-    },
-    "/about": {
-      "id": "about",
-      "file": "frontend/pages/about.html",
-      "sha256": "3bc341175bc2d5071e05191ab1870e09a2b42454861c648d3fa90562f9b2dbc9"
-    },
-    "/work-with-us": {
-      "id": "work-with-us",
-      "file": "frontend/pages/work-with-us.html",
-      "sha256": "7011137b0dcecde07b4ece28485271c29ce0a22e08e8c6f9fb02654465afcb31"
+      "sha256": "ea6cdb0ed312682d7efd782e337a7d077cc39056a1abd264419b6434d51f33d2"
     },
     "/contact": {
       "id": "contact",
       "file": "frontend/pages/contact.html",
-      "sha256": "38aa6188a5bc7c6160a24d28bf990b7b760073692fac27d9a20ac7a385f23137"
+      "sha256": "8b0171878a7c1014e8e5eb87485820eabb3764101579cf1e04fefab4d99b888c"
     },
     "/login": {
       "id": "login",
       "file": "frontend/pages/login.html",
-      "sha256": "e8c89a384d5a5a8821b745f2afd7ff6b831e6172a1b374b6ec03bbcadfec8d01"
+      "sha256": "0af23679d23bff67e8ba46fd416235cff71117258def5fe6dad916edf7ef4114"
     },
-    "/faqs": {
-      "id": "faqs",
-      "file": "frontend/pages/faqs.html",
-      "sha256": "72f5690d78120dbcdcc0672328c13080e9d5710603a9961bcf0de3feab198154"
+    "/work-with-us": {
+      "id": "work-with-us",
+      "file": "frontend/pages/work-with-us.html",
+      "sha256": "1d8f9e697feba38569acf5ccb47c4fa3033684e297f77caec31063bf8e13a766"
     }
   },
   "approved_adjustments": [
-    "Preview hash routes mapped to existing application URLs; FAQ navigation shared across pages.",
-    "Contact fields bound to existing /api/submit handler with unchanged server validation, spam protection and referral attribution.",
-    "Partner application links bound to existing /partner/signup and /partner/login journeys.",
-    "Monthly management hosting clarification requested by the owner; self-hosted costs remain customer responsibility.",
-    "Team sign-in uses protected /admin; Google customer login retains /account return path.",
-    "Preserve the original preview parser mode: its stylesheet precedes the DOCTYPE. No CSS approximation is used to hide compatibility differences."
-  ]
+    "Preview source transferred in full with original image bytes and CSS cascade.",
+    "Homepage sections replace old public routes through query-preserving redirects.",
+    "Slideshow arrows removed as instructed; native pointer gestures, dots and keyboard retained.",
+    "Existing contact validation, attribution and audit checkout bindings retained.",
+    "Preview-only forms and manually duplicated chat answers replaced with real production handlers.",
+    "Chat is lazy-loaded; public information is extracted from the rendered approved source during build."
+  ],
+  "rollback_release": "Fly v30 / deployment-01M8EXZWHR349BSDHDE1V37HE8"
 }

@@ -1,9 +1,7 @@
-.skip-link{position:absolute;left:-10000px}.skip-link:focus{left:8px;top:8px;z-index:100;background:white;color:#12304a;padding:10px}html{scroll-behavior:smooth}#quote-form .form-result{overflow-wrap:anywhere}#quote-form .form-result.error{color:#9a3932}
-
-/* Keep the approved public navigation visible while scrolling. */
-body>header{position:sticky;top:0;z-index:1000}
-.skip-link:focus{z-index:1001}
-html{scroll-padding-top:var(--bt38-header-height, 100px)}
-
+.skip-link{position:absolute;left:-10000px;top:0;padding:10px;background:white;color:#16324f;z-index:1001}.skip-link:focus{left:10px}
+body>header{position:sticky;top:0;z-index:1000}html{scroll-padding-top:var(--header-height,120px)}
 #features #frame{touch-action:pan-y pinch-zoom}
-@media(pointer:coarse){#features .controls .dot{position:relative;touch-action:manipulation}#features .controls .dot::after{content:"";position:absolute;inset:-14px -6px}#features #prev::after,#features #next::after{content:"";position:absolute;inset:-4px}#features #prev,#features #next{touch-action:manipulation}}
+.form-result{white-space:pre-wrap;color:#15334e}.form-result.error{color:#a52626}
+#btchat-forget{display:block;position:static;width:auto;height:auto;border:0;border-radius:0;background:transparent;color:#165ca8;font:inherit;text-decoration:underline;padding:4px 0;margin:auto;transform:none}
+#btchat-panel[hidden]{display:none!important}#btchat-send:disabled{opacity:.65;cursor:wait}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important}}

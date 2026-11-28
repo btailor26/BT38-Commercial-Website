@@ -13,7 +13,7 @@ const cookie=async(sub,email)=>'__Host-bt38-google='+await new SignJWT({purpose:
 const admin=await cookie('admin-sub','admin@gmail.com'),alice=await cookie('alice-sub','alice@gmail.com');
 const call=(path,method='GET',data,c='',extra={})=>worker.fetch(new Request(origin+path,{method,headers:{origin,cookie:c,'Content-Type':'application/json',...extra},...(data?{body:JSON.stringify(data)}:{})}),env,{});
 try{
-for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/partner','/account','/account/onboarding','/account/billing','/account/support','/signup','/login','/auth/google'])assert.equal((await call(path)).status,200,path);
+for(const path of ['/','/services','/integrations','/solutions','/about','/contact','/work-with-us','/partner','/account','/account/onboarding','/account/billing','/account/support','/signup','/login','/auth/google'])assert.equal((await call(path)).status,['/services','/integrations','/about','/faqs'].includes(path)?308:200,path);
 const protectedAdmin=await call('/admin');assert.equal(protectedAdmin.status,302);assert.equal(new URL(protectedAdmin.headers.get('location')).pathname,'/auth/google');assert.equal((await call('/admin','GET',null,alice)).status,403);assert.equal((await call('/admin','GET',null,admin)).status,200);
 assert.equal((await call('/api/admin','GET',null,'',{'oai-authenticated-user-id':'forged','oai-authenticated-user-email':env.ADMIN_EMAIL})).status,401);
 assert.equal((await call('/api/admin','GET',null,alice)).status,403);
