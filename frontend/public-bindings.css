@@ -7,3 +7,9 @@ body>header{position:sticky;top:0;z-index:1000}html{scroll-padding-top:var(--hea
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important}}
 
 #features .controls .dot{touch-action:manipulation}
+/* Narrow-screen copy needs its own space above the dots; keep every slide the same height. */
+@media(max-width:760px){
+ #home .slide{grid-template-rows:auto 290px}
+ #home .opening-visual{height:290px}
+ #home .slide:not(.opening-slide)>.photo{height:290px;min-height:290px;max-height:290px}
+}
